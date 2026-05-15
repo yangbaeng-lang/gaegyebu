@@ -1,0 +1,90 @@
+================================================================
+  가계부 홈페이지 - Render 배포 가이드
+================================================================
+
+[ 개요 ]
+- Render 클라우드 서버에 배포하면 내 PC가 꺼져 있어도 24시간 접속 가능
+- 무료 플랜 사용 가능 (15분간 접속 없으면 슬립 → 첫 접속 시 20~30초 로딩)
+
+
+================================================================
+  1단계: GitHub에 코드 올리기
+================================================================
+
+1. GitHub 계정이 없으면 https://github.com 에서 가입
+
+2. 로그인 후 새 레포 만들기
+   - 우측 상단 [+] 버튼 → [New repository]
+   - Repository name: gaegyebu (원하는 이름)
+   - [Create repository] 클릭
+
+3. PowerShell을 열고 아래 명령어 순서대로 실행
+
+   cd "f:\One Drive\OneDrive - SK Hynix Inc\AI 작업폴더\가계부 홈페이지 제작"
+
+   git init
+   git add .
+   git commit -m "initial commit"
+   git branch -M main
+   git remote add origin https://github.com/여기에_GitHub_아이디/gaegyebu.git
+   git push -u origin main
+
+   ※ "여기에_GitHub_아이디" 부분을 본인 GitHub 아이디로 변경
+
+
+================================================================
+  2단계: Render 배포 설정
+================================================================
+
+1. https://render.com 접속
+   → [Sign up with GitHub] 으로 가입 (GitHub 계정 연동)
+
+2. 로그인 후 [New] → [Web Service] 클릭
+
+3. GitHub 레포 선택 (gaegyebu)
+
+4. 아래 설정값 입력
+
+   Name           : gaegyebu (원하는 이름)
+   Region         : Singapore (한국에서 가장 빠름)
+   Runtime        : Node
+   Build Command  : npm install && npx prisma generate && npx prisma migrate deploy
+   Start Command  : npm start
+
+5. [Add Disk] 클릭 (SQLite DB 파일 보존용)
+
+   Name           : db-data
+   Mount Path     : /var/data
+   Size           : 1 GB
+
+6. [Environment Variables] 에 아래 두 항목 추가
+
+   DATABASE_URL   : file:/var/data/gaegyebu.db
+   NODE_ENV       : production
+
+7. [Create Web Service] 클릭
+   → 배포 시작 (3~5분 소요)
+
+
+================================================================
+  3단계: 배포 완료
+================================================================
+
+- 배포 완료 후 아래 형태의 주소로 누구나 접속 가능
+  https://gaegyebu.onrender.com
+
+- PC가 꺼진 상태에서도 접속 가능 (Render 서버에서 운영)
+
+
+================================================================
+  Render 무료 플랜 정리
+================================================================
+
+  PC 꺼져도 접속 가능?  : YES
+  슬립 조건             : 15분간 접속 없으면 슬립 상태 전환
+  슬립 후 첫 접속       : 20~30초 로딩 발생 (이후 정상 속도)
+  무료 사용 시간        : 월 750시간 (사실상 24시간 운영 가능)
+  데이터 유지           : 슬립 중에도 DB 데이터 유지됨
+  항상 깨어있게 하려면  : 유료 플랜 ($7/월) 업그레이드 필요
+
+================================================================

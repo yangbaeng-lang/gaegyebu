@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(Get-ChildItem -Path . -Force)",
+      "Bash(cd \"/f/One Drive/OneDrive - SK Hynix Inc/AI 작업폴더/가계부 홈페이지 제작\" && ls -la)",
+      "Read(//f/f/One Drive/OneDrive - SK Hynix Inc/AI 작업폴더/**)",
+      "Bash(Get-ChildItem -Path \"f:\\\\One Drive\\\\OneDrive - SK Hynix Inc\\\\AI 작업폴더\\\\가계부 홈페이지 제작\" -Recurse -Force)",
+      "Bash(Select-Object FullName)"
+    ]
+  }
+}

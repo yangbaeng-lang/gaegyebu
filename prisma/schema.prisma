@@ -1,0 +1,70 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Session {
+  id        Int      @id @default(autoincrement())
+  name      String
+  createdAt DateTime @default(now())
+}
+
+model Transaction {
+  id        Int      @id @default(autoincrement())
+  sessionId Int      @default(1)
+  type      String   // "income" | "expense" | "transfer"
+  date      String   // "2026-05-07" (YYYY-MM-DD)
+  desc      String
+  amount    Float
+  fromAcct  String   // 출금 계정 or 수입 분류
+  toAcct    String   // 입금 계정 or 카테고리
+  memo      String   @default("")
+  createdAt DateTime @default(now())
+}
+
+model Budget {
+  id        Int    @id @default(autoincrement())
+  sessionId Int    @default(1)
+  category  String
+  amount    Float
+  yearMonth String // "2026-05"
+
+  @@unique([sessionId, category, yearMonth])
+}
+
+model Asset {
+  id        Int    @id @default(autoincrement())
+  sessionId Int    @default(1)
+  name      String
+  type      String // "예금/적금" | "투자" | "현금" | "부동산"
+  kind      String // "asset" | "liability"
+  amount    Float
+  color     String @default("#4a6fdb")
+  icon      String @default("ti-wallet")
+}
+
+model Goal {
+  id        Int    @id @default(autoincrement())
+  sessionId Int    @default(1)
+  name      String
+  icon      String @default("🎯")
+  color     String @default("#6b8cff")
+  target    Float
+  current   Float  @default(0)
+}
+
+model Category {
+  id        Int     @id @default(autoincrement())
+  sessionId Int     @default(1)
+  type      String
+  name      String
+  group     String  @default("")
+  sortOrder Int     @default(0)
+  hidden    Boolean @default(false)
+
+  @@unique([sessionId, type, group, name])
+}

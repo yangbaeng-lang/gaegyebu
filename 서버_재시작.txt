@@ -1,0 +1,47 @@
+■ 개발 서버 재시작 명령어
+
+1. 현재 실행 중인 서버 종료
+   터미널에서 Ctrl + C
+
+2. 프로젝트 폴더로 이동
+   cd "f:\One Drive\OneDrive - SK Hynix Inc\AI 작업폴더\가계부 홈페이지 제작"
+
+3. 개발 서버 시작
+   npm run dev
+
+4. 브라우저에서 접속
+   http://localhost:3000
+R
+
+■ 한 번에 실행 (PowerShell)
+   cd "f:\One Drive\OneDrive - SK Hynix Inc\AI 작업폴더\가계부 홈페이지 제작"; npm run dev
+
+
+■ 터미널 찾는 방법
+
+- VS Code 사용 중이라면: VS Code 하단 터미널 패널 (Ctrl + `)
+- 별도 창이라면: 작업 표시줄에서 PowerShell 또는 터미널 아이콘 클릭
+
+■ 터미널을 새로 열어서 실행하는 방법
+
+  Win + R 누르고 powershell 입력 후 Enter
+  아래 명령어 순서대로 입력:
+
+  cd "f:\One Drive\OneDrive - SK Hynix Inc\AI 작업폴더\가계부 홈페이지 제작"
+  npm run dev
+
+  "Ready in ..." 메시지가 뜨면 브라우저에서 http://localhost:3000 접속
+
+※ 포트 충돌(3001 등) 오류가 나면 기존 터미널 창을 찾아 Ctrl+C 후 다시 실행
+
+PowerShell 실행 정책 문제입니다. 현재 사용자 범위에서만 스크립트 실행을 허용하도록 설정하면 됩니다.
+
+터미널에서 아래 명령어를 실행하세요:
+
+
+Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
+실행 후 확인 메시지가 나오면 Y 를 입력하고 엔터를 누르면 됩니다.
+
+그 다음 다시 npm run dev를 실행하면 정상 작동합니다.
+
+왜 이런 문제가 생기나요? Windows PowerShell은 기본적으로 외부 스크립트 실행을 막아놓는데, npm이 .ps1 스크립트로 동작하기 때문에 이 정책에 걸립니다. RemoteSigned는 로컬 스크립트는 허용하고 인터넷에서 받은 스크립트만 서명을 요구하는 안전한 설정입니다.
