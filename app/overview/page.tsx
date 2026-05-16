@@ -125,7 +125,7 @@ export default function OverviewPage() {
 
   const fetchSeries = (m: string, ids: Set<number>) => {
     if (ids.size === 0) { setSeries([]); return Promise.resolve() }
-    return fetch(`/api/overview/charts?mode=${m}&include=${[...ids].join(',')}`)
+    return fetch(`/api/overview/charts?mode=${m}&include=${Array.from(ids).join(',')}`)
       .then(r => r.json()).then((d: { series: SeriesItem[] }) => setSeries(d.series))
   }
 
@@ -135,7 +135,7 @@ export default function OverviewPage() {
     const ctrl = new AbortController()
     cumulAbortRef.current = ctrl
     setCumulLoading(true)
-    return fetch(`/api/overview/cumulative-profit?mode=${m}&include=${[...ids].join(',')}`, { signal: ctrl.signal })
+    return fetch(`/api/overview/cumulative-profit?mode=${m}&include=${Array.from(ids).join(',')}`, { signal: ctrl.signal })
       .then(r => r.json())
       .then(d => { setCumulData(d); setCumulVisible(new Set(d.sessions.map((s: SessionItem) => s.id))); setCumulLoading(false) })
       .catch(e => { if (e.name !== 'AbortError') setCumulLoading(false) })

@@ -65,7 +65,7 @@ export async function GET(req: NextRequest) {
   // 전체 기간 수집
   const allPeriodsSet = new Set<string>()
   sessionData.forEach(r => r.forEach((_, p) => allPeriodsSet.add(p)))
-  const sortedPeriods = [...allPeriodsSet].sort()
+  const sortedPeriods = Array.from(allPeriodsSet).sort()
 
   // 세션별 "마지막 알려진 값"으로 공백 기간 채우기
   const lastKnown = sessionData.map(() => ({ assets: 0, liab: 0 }))

@@ -200,7 +200,7 @@ export default function JournalPage() {
 
   const handleDeleteSelected = async () => {
     if (selectedIds.size === 0) return
-    const ids = [...selectedIds]
+    const ids = Array.from(selectedIds)
     const count = ids.length
     if (!confirm(`선택한 ${count}건을 삭제하시겠습니까?`)) return
     const allTxs = panel?.type === 'account' ? panelLedgerRows.map(r => r.tx) : panelDescRows

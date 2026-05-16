@@ -187,7 +187,7 @@ export async function POST(req: NextRequest) {
     }
 
     // 자산 잔액 일괄 업데이트 (계정당 1회)
-    for (const [acctName, delta] of assetDeltas.entries()) {
+    for (const [acctName, delta] of Array.from(assetDeltas.entries())) {
       if (delta === 0) continue
       const asset = assetMap.get(acctName)
       if (!asset || asset.id === -1) continue

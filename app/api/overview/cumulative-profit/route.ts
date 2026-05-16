@@ -30,7 +30,7 @@ export async function GET(req: NextRequest) {
   // 전체 기간 수집 후 정렬
   const allPeriodsSet = new Set<string>()
   sessionProfits.forEach(m => m.forEach((_, p) => allPeriodsSet.add(p)))
-  const sortedPeriods = [...allPeriodsSet].sort()
+  const sortedPeriods = Array.from(allPeriodsSet).sort()
 
   const getLabel = (p: string) =>
     mode === 'monthly' ? `${p.slice(2, 4)}/${p.slice(5, 7)}` : `${p}년`

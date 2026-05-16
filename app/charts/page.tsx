@@ -321,7 +321,7 @@ export default function ChartsPage() {
                   <YAxis yAxisId="right" domain={rateDomain} hide orientation="right" />
                   <ReferenceLine yAxisId="left" y={0} stroke="#e5e7eb" />
                   <Tooltip
-                    formatter={(v: number | null, name: string) =>
+                    formatter={(v, name) =>
                       name === 'netWorth' ? [fmt(v as number), '누적 순이익'] :
                       name === 'momRate'  ? [`${v}%`, '전월 대비'] :
                                            [`${v}%`, '전년 대비']}
