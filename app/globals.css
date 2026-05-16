@@ -8,6 +8,7 @@ body, * {
 
 /* 모바일 Safari 툴바를 포함한 실제 가용 높이 */
 body {
+  height: 100vh;
   height: 100svh;
 }
 
