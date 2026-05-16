@@ -16,18 +16,21 @@ export default function BottomNav() {
   const isActive = (href: string) => href === '/' ? pathname === '/' : pathname.startsWith(href)
 
   return (
-    <nav className="md:hidden flex items-stretch bg-[#1a1f2e] border-t border-white/10 h-14 flex-shrink-0">
-      {NAV.map(n => {
-        const active = isActive(n.href)
-        return (
-          <Link key={n.href} href={n.href}
-            className={`flex-1 flex flex-col items-center justify-center gap-0.5 transition-colors
-              ${active ? 'text-[#6b8cff]' : 'text-white/50'}`}>
-            <i className={`ti ${n.icon} text-xl`} />
-            <span className="text-[9px] leading-none">{n.label}</span>
-          </Link>
-        )
-      })}
+    <nav className="md:hidden bg-[#1a1f2e] border-t border-white/10 flex-shrink-0"
+      style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
+      <div className="flex items-stretch h-14">
+        {NAV.map(n => {
+          const active = isActive(n.href)
+          return (
+            <Link key={n.href} href={n.href}
+              className={`flex-1 flex flex-col items-center justify-center gap-0.5 transition-colors
+                ${active ? 'text-[#6b8cff]' : 'text-white/50'}`}>
+              <i className={`ti ${n.icon} text-xl`} />
+              <span className="text-[9px] leading-none">{n.label}</span>
+            </Link>
+          )
+        })}
+      </div>
     </nav>
   )
 }
