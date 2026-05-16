@@ -81,7 +81,6 @@ export default function SideNav() {
   const currentSession = sessions.find(s => s.id === currentSid)
 
   return (
-    <>
     <aside className="hidden md:flex md:flex-col md:w-48 bg-[#1a1f2e] md:flex-shrink-0">
       {/* 타이틀 */}
       <div className="px-4 py-4 border-b border-white/10 flex items-center justify-center">
@@ -205,21 +204,5 @@ export default function SideNav() {
         </Link>
       </div>
     </aside>
-
-    {/* ── 모바일 하단 탭바 ── */}
-    <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-[#1a1f2e] flex items-stretch border-t border-white/10 h-14">
-      {NAV.map(n => {
-        const active = isActive(n.href)
-        return (
-          <Link key={n.href} href={n.href}
-            className={`flex-1 flex flex-col items-center justify-center gap-0.5 transition-colors
-              ${active ? 'text-[#6b8cff]' : 'text-white/50'}`}>
-            <i className={`ti ${n.icon} text-xl`} />
-            <span className="text-[9px] leading-none">{n.label}</span>
-          </Link>
-        )
-      })}
-    </nav>
-    </>
   )
 }
