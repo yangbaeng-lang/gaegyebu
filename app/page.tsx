@@ -422,10 +422,10 @@ export default function InsertPage() {
           )}
 
           {/* 5열 입력 영역 — 항목 모두 펼침, 스크롤 없음 */}
-          <div className="flex border border-gray-100 bg-white rounded-xl overflow-hidden">
+          <div className="flex flex-col md:flex-row border border-gray-100 bg-white rounded-xl overflow-hidden">
 
             {/* ① 날짜 */}
-            <div className="w-40 flex-shrink-0 border-r border-gray-100 flex flex-col">
+            <div className="md:w-40 md:flex-shrink-0 border-b border-gray-100 md:border-b-0 md:border-r flex flex-col">
               <ColHeader label="날짜" />
               <div className="p-3">
                 <input type="date" value={form.date}
@@ -435,7 +435,7 @@ export default function InsertPage() {
             </div>
 
             {/* ② 내용 */}
-            <div className="w-40 flex-shrink-0 border-r border-gray-100 flex flex-col">
+            <div className="md:w-40 md:flex-shrink-0 border-b border-gray-100 md:border-b-0 md:border-r flex flex-col">
               <ColHeader label="내용" />
               <div className="p-3 flex flex-col gap-2">
                 <div className="relative">
@@ -467,7 +467,7 @@ export default function InsertPage() {
             </div>
 
             {/* ③ 금액 */}
-            <div className="w-40 flex-shrink-0 border-r border-gray-100 flex flex-col">
+            <div className="md:w-40 md:flex-shrink-0 border-b border-gray-100 md:border-b-0 md:border-r flex flex-col">
               <ColHeader label="금액" />
               <div className="p-3 flex flex-col gap-3">
                 <AmountInput value={form.amount}
@@ -485,20 +485,27 @@ export default function InsertPage() {
               </div>
             </div>
 
-            {/* ④ 입금 */}
-            <div className="flex-1 border-r border-gray-100 flex flex-col">
-              <ColHeader label="입금" />
-              <AcctPane side="to" selected={form.toAcct} sections={toSections}
-                onSelect={acc => setForm(f => ({ ...f, toAcct: acc }))}
-                showHidden={showHidden} onToggleShowHidden={() => setShowHidden(v => !v)} />
-            </div>
+            {/* ④⑤ 입금 / 출금 — 모바일: 2열 그리드, 데스크톱: 각 flex-1 */}
+            <div className="md:contents grid grid-cols-2">
+              {/* ④ 입금 */}
+              <div className="md:flex-1 border-r border-gray-100 flex flex-col">
+                <ColHeader label="입금" />
+                <div className="overflow-y-auto max-h-60 md:max-h-none">
+                  <AcctPane side="to" selected={form.toAcct} sections={toSections}
+                    onSelect={acc => setForm(f => ({ ...f, toAcct: acc }))}
+                    showHidden={showHidden} onToggleShowHidden={() => setShowHidden(v => !v)} />
+                </div>
+              </div>
 
-            {/* ⑤ 출금 */}
-            <div className="flex-1 flex flex-col">
-              <ColHeader label="출금" />
-              <AcctPane side="from" selected={form.fromAcct} sections={fromSections}
-                onSelect={acc => setForm(f => ({ ...f, fromAcct: acc }))}
-                showHidden={showHidden} onToggleShowHidden={() => setShowHidden(v => !v)} />
+              {/* ⑤ 출금 */}
+              <div className="md:flex-1 flex flex-col">
+                <ColHeader label="출금" />
+                <div className="overflow-y-auto max-h-60 md:max-h-none">
+                  <AcctPane side="from" selected={form.fromAcct} sections={fromSections}
+                    onSelect={acc => setForm(f => ({ ...f, fromAcct: acc }))}
+                    showHidden={showHidden} onToggleShowHidden={() => setShowHidden(v => !v)} />
+                </div>
+              </div>
             </div>
           </div>
 
