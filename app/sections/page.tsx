@@ -68,14 +68,24 @@ export default function SectionsPage() {
   const createSection = async () => {
     if (!newName.trim() || creating) return
     setCreating(true)
-    const res = await fetch('/api/sessions', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name: newName.trim(), mode: createMode }),
-    })
-    const newSession = await res.json()
-    await fetch(`/api/sessions/${newSession.id}`, { method: 'POST' })
-    window.location.href = '/'
+    try {
+      const res = await fetch('/api/sessions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: newName.trim(), mode: createMode }),
+      })
+      const newSession = await res.json()
+      if (!res.ok) {
+        alert(`섹션 생성 실패: ${newSession.error ?? res.status}`)
+        return
+      }
+      await fetch(`/api/sessions/${newSession.id}`, { method: 'POST' })
+      window.location.href = '/'
+    } catch (e) {
+      alert(`오류: ${e}`)
+    } finally {
+      setCreating(false)
+    }
   }
 
   const totalAssets = sections.reduce((s, r) => s + r.totalAssets, 0)
