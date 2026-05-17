@@ -75,6 +75,10 @@ function inferType(fromPrefix: string, toPrefix: string): string {
 export async function POST(req: NextRequest) {
   try {
     const sid = getSid(req)
+    const url = new URL(req.url)
+    const dryRun = url.searchParams.get('dryRun') === 'true'
+    const skipDuplicates = url.searchParams.get('skipDuplicates') !== 'false'
+
     const formData = await req.formData()
     const files = formData.getAll('files') as File[]
 
@@ -85,9 +89,10 @@ export async function POST(req: NextRequest) {
       where: { sessionId: sid },
       select: { date: true, desc: true, amount: true, fromAcct: true, toAcct: true },
     })
-    const txSet = new Set(
+    const existingTxSet = new Set(
       existingTxRows.map(t => `${t.date}|${t.desc}|${t.amount}|${t.fromAcct}|${t.toAcct}`)
     )
+    const importedSet = new Set<string>()
 
     const existingCatRows = await prisma.category.findMany({
       where: { sessionId: sid },
@@ -108,6 +113,7 @@ export async function POST(req: NextRequest) {
     // ── 파일 파싱 & 분류 ──
     let imported = 0
     let skipped  = 0
+    let duplicates = 0
     const errors: string[] = []
     const newTxs: {
       sessionId: number; date: string; desc: string; amount: number;
@@ -151,8 +157,12 @@ export async function POST(req: NextRequest) {
           if (!parsed) { skipped++; continue }
 
           const key = `${parsed.date}|${parsed.desc}|${parsed.amount}|${parsed.fromAcct}|${parsed.toAcct}`
-          if (txSet.has(key)) { skipped++; continue }
-          txSet.add(key)
+          if (importedSet.has(key)) { skipped++; continue }
+          if (existingTxSet.has(key)) {
+            duplicates++
+            if (skipDuplicates) { continue }
+          }
+          importedSet.add(key)
 
           ensureCategory(parsed.fromAcct, parsed.fromPrefix)
           ensureCategory(parsed.toAcct,   parsed.toPrefix)
@@ -173,6 +183,10 @@ export async function POST(req: NextRequest) {
           skipped++
         }
       }
+    }
+
+    if (dryRun) {
+      return NextResponse.json({ toImport: newTxs.length, duplicates, errors: errors.slice(0, 10) })
     }
 
     // ── 일괄 DB 저장 ──
@@ -197,7 +211,7 @@ export async function POST(req: NextRequest) {
       } catch {}
     }
 
-    return NextResponse.json({ imported, skipped, errors: errors.slice(0, 10) })
+    return NextResponse.json({ imported, skipped, duplicates, errors: errors.slice(0, 10) })
   } catch (e) {
     console.error('[import-excel]', e)
     return NextResponse.json({ error: String(e) }, { status: 500 })

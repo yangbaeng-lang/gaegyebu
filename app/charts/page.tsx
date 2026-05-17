@@ -18,7 +18,7 @@ type ChartsData = {
 }
 
 const COLORS = ['#4a6fdb','#2a9d5c','#d94f4f','#f0a020','#8b5cf6','#06b6d4','#ec4899','#84cc16','#f97316','#6366f1']
-const TIP = { fontSize: 11, borderRadius: 8, border: '1px solid #e5e7eb' }
+const TIP = { fontSize: 11, fontWeight: 'bold' as const, borderRadius: 8, border: '1px solid #e5e7eb', boxShadow: '0 4px 12px rgba(0,0,0,0.08)' }
 
 function formatY(v: number) {
   const a = Math.abs(v)

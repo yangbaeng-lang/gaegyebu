@@ -401,7 +401,7 @@ export default function OverviewPage() {
                       <BarChart data={cumulData.series} width={w} height={h} margin={{ top: 10, right: 8, left: 0, bottom: 4 }} barCategoryGap="30%" barGap={0}>
                         <XAxis dataKey="label" {...xProps} />
                         <YAxis tickFormatter={fmtY} {...yProps} />
-                        <Tooltip formatter={(value: number, name: string) => [fmtFull(value), name]} contentStyle={{ fontSize: 12, borderRadius: 12, border: '1px solid #e5e7eb' }} cursor={{ fill: '#f3f4f6' }} />
+                        <Tooltip formatter={(value: number, name: string) => [fmtFull(value), name]} contentStyle={{ fontSize: 12, fontWeight: 'bold', borderRadius: 12, border: '1px solid #e5e7eb', boxShadow: '0 4px 12px rgba(0,0,0,0.08)' }} cursor={{ fill: '#f3f4f6' }} />
                         <Legend iconType="square" iconSize={10} wrapperStyle={{ fontSize: 11, paddingTop: 8 }} />
                         <ReferenceLine y={0} stroke="#e5e7eb" />
                         {cumulData.sessions.map((s, i) => {

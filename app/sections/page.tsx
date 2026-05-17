@@ -22,8 +22,10 @@ export default function SectionsPage() {
   const [newName,     setNewName]     = useState('')
   const [createMode,  setCreateMode]  = useState<'copy' | 'fresh'>('fresh')
   const [creating,    setCreating]    = useState(false)
-  const [importResult, setImportResult] = useState<{ imported: number; skipped: number; error?: string } | null>(null)
+  const [importResult, setImportResult] = useState<{ imported: number; skipped: number; duplicates?: number; error?: string } | null>(null)
   const [importing,    setImporting]    = useState(false)
+  const [pendingFiles, setPendingFiles] = useState<File[] | null>(null)
+  const [duplicateModal, setDuplicateModal] = useState<{ count: number } | null>(null)
 
   const fetchData = () =>
     Promise.all([
@@ -42,17 +44,15 @@ export default function SectionsPage() {
     window.location.href = '/'
   }
 
-  const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files
-    if (!files || files.length === 0) return
+  const runImport = async (files: File[], skipDuplicates: boolean) => {
     setImporting(true); setImportResult(null)
     const fd = new FormData()
-    Array.from(files).forEach(f => fd.append('files', f))
+    files.forEach(f => fd.append('files', f))
     try {
-      const res  = await fetch('/api/import-excel', { method: 'POST', body: fd })
+      const res  = await fetch(`/api/import-excel?skipDuplicates=${skipDuplicates}`, { method: 'POST', body: fd })
       const data = await res.json()
       if (res.ok) {
-        setImportResult({ imported: data.imported ?? 0, skipped: data.skipped ?? 0 })
+        setImportResult({ imported: data.imported ?? 0, skipped: data.skipped ?? 0, duplicates: data.duplicates })
       } else {
         setImportResult({ imported: 0, skipped: 0, error: data.error ?? '가져오기에 실패했습니다' })
       }
@@ -60,9 +60,45 @@ export default function SectionsPage() {
       setImportResult({ imported: 0, skipped: 0, error: `오류: ${e}` })
     } finally {
       setImporting(false)
-      e.target.value = ''
       fetchData()
     }
+  }
+
+  const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files
+    if (!files || files.length === 0) return
+    const fileList = Array.from(files)
+    e.target.value = ''
+    setImporting(true); setImportResult(null)
+    const fd = new FormData()
+    fileList.forEach(f => fd.append('files', f))
+    try {
+      const res  = await fetch('/api/import-excel?dryRun=true', { method: 'POST', body: fd })
+      const data = await res.json()
+      if (!res.ok) {
+        setImportResult({ imported: 0, skipped: 0, error: data.error ?? '가져오기에 실패했습니다' })
+        setImporting(false)
+        return
+      }
+      if ((data.duplicates ?? 0) > 0) {
+        setPendingFiles(fileList)
+        setDuplicateModal({ count: data.duplicates })
+        setImporting(false)
+      } else {
+        await runImport(fileList, true)
+      }
+    } catch (e) {
+      setImportResult({ imported: 0, skipped: 0, error: `오류: ${e}` })
+      setImporting(false)
+    }
+  }
+
+  const handleDuplicateChoice = async (skipDuplicates: boolean) => {
+    const files = pendingFiles
+    setDuplicateModal(null)
+    setPendingFiles(null)
+    if (!files) return
+    await runImport(files, skipDuplicates)
   }
 
   const createSection = async () => {
@@ -122,7 +158,7 @@ export default function SectionsPage() {
               <span className={`text-xs font-medium ${importResult.error ? 'text-red-700' : 'text-green-700'}`}>
                 {importResult.error
                   ? importResult.error
-                  : `가져오기 완료 — ${importResult.imported}건 추가, ${importResult.skipped}건 건너뜀`}
+                  : `가져오기 완료 — ${importResult.imported}건 추가${importResult.duplicates != null ? `, 중복 ${importResult.duplicates}건` : ''}, ${importResult.skipped}건 건너뜀`}
               </span>
               <button onClick={() => setImportResult(null)} className={`ml-auto ${importResult.error ? 'text-red-400 hover:text-red-600' : 'text-green-400 hover:text-green-600'}`}>
                 <i className="ti ti-x text-xs" />
@@ -205,6 +241,39 @@ export default function SectionsPage() {
           섹션 만들기
         </button>
       </div>
+
+      {/* 중복 데이터 확인 모달 */}
+      {duplicateModal && (
+        <div className="fixed inset-0 bg-black/30 z-50 flex items-center justify-center">
+          <div className="bg-white rounded-2xl p-5 w-80 shadow-xl">
+            <div className="flex items-center gap-2 mb-3">
+              <i className="ti ti-alert-triangle text-amber-500 text-lg" />
+              <h3 className="text-[15px] font-semibold text-gray-800">중복 데이터 발견</h3>
+            </div>
+            <p className="text-[13px] text-gray-600 mb-4">
+              이미 저장된 데이터와 중복되는 <span className="font-semibold text-gray-800">{duplicateModal.count}건</span>이 있습니다.<br />
+              중복 데이터를 어떻게 처리할까요?
+            </p>
+            <div className="flex flex-col gap-2">
+              <button
+                onClick={() => handleDuplicateChoice(false)}
+                className="w-full py-2 text-[13px] font-semibold bg-[#1a1f2e] text-white rounded-lg hover:opacity-90 transition-opacity">
+                중복 포함하여 가져오기
+              </button>
+              <button
+                onClick={() => handleDuplicateChoice(true)}
+                className="w-full py-2 text-[13px] font-semibold border border-gray-200 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors">
+                중복 제외하고 가져오기
+              </button>
+              <button
+                onClick={() => { setDuplicateModal(null); setPendingFiles(null) }}
+                className="w-full py-2 text-[13px] font-medium text-gray-400 hover:text-gray-600 transition-colors">
+                취소
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* 섹션 만들기 모달 */}
       {showModal && (

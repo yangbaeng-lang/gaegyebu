@@ -3,7 +3,7 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "sqlite"
   url      = env("DATABASE_URL")
 }
 
@@ -67,4 +67,14 @@ model Category {
   hidden    Boolean @default(false)
 
   @@unique([sessionId, type, group, name])
+}
+
+model PensionEval {
+  id         Int    @id @default(autoincrement())
+  sessionId  Int
+  assetName  String
+  yearMonth  String
+  evalAmount Float  @default(0)
+
+  @@unique([sessionId, assetName, yearMonth])
 }

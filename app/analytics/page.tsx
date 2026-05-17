@@ -332,7 +332,7 @@ export default function AnalyticsPage() {
                       fmt(v),
                       name === 'income' ? '수입' : name === 'expense' ? '지출' : '순수익',
                     ]}
-                    contentStyle={{ fontSize: 11, borderRadius: 8, border: '1px solid #e5e7eb' }}
+                    contentStyle={{ fontSize: 11, fontWeight: 'bold', borderRadius: 8, border: '1px solid #e5e7eb', boxShadow: '0 4px 12px rgba(0,0,0,0.08)' }}
                   />
                   <Bar dataKey="income"  fill="#4fe8a0" radius={[3,3,0,0]} />
                   <Bar dataKey="expense" fill="#ff9090" radius={[3,3,0,0]} />

@@ -184,6 +184,24 @@ export default function SideNav() {
       </nav>
 
       <div className="border-t border-white/10 py-3">
+        <Link href="/pension"
+          className={`flex items-center gap-2.5 px-3 py-2 mx-2 rounded-lg text-base transition-colors
+            ${pathname === '/pension'
+              ? 'text-white bg-[#6b8cff]'
+              : 'text-white hover:bg-white/[0.08]'
+            }`}>
+          <i className="ti ti-pig-money text-base w-4 flex-shrink-0" />
+          <span className="font-semibold">연금 결산</span>
+        </Link>
+        <Link href="/pension-charts"
+          className={`flex items-center gap-2.5 px-3 py-2 mx-2 rounded-lg text-base transition-colors
+            ${pathname === '/pension-charts'
+              ? 'text-white bg-[#6b8cff]'
+              : 'text-white hover:bg-white/[0.08]'
+            }`}>
+          <i className="ti ti-chart-bar text-base w-4 flex-shrink-0" />
+          <span className="font-semibold">연금 차트</span>
+        </Link>
         <Link href="/overview"
           className={`flex items-center gap-2.5 px-3 py-2 mx-2 rounded-lg text-base transition-colors
             ${pathname === '/overview'
