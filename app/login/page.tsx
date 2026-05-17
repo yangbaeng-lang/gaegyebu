@@ -12,15 +12,20 @@ export default function LoginPage() {
     e.preventDefault()
     setLoading(true)
     setError('')
-    const res = await fetch('/api/auth/login', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ password }),
-    })
-    if (res.ok) {
-      router.push('/')
-    } else {
-      setError('비밀번호가 틀렸습니다')
+    try {
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password }),
+      })
+      if (res.ok) {
+        router.push('/')
+      } else {
+        setError('비밀번호가 틀렸습니다')
+        setLoading(false)
+      }
+    } catch {
+      setError('서버 연결에 실패했습니다. 잠시 후 다시 시도해 주세요.')
       setLoading(false)
     }
   }

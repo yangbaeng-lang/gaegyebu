@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import prisma from '@/lib/db'
+import { Prisma } from '@prisma/client'
 import { getSid } from '@/lib/session'
 
 const DEFAULTS = {
@@ -117,8 +118,12 @@ export async function POST(req: NextRequest) {
     if (type === 'account_liability') await syncAsset(name.trim(), 'liability', sid)
 
     return NextResponse.json(cat)
-  } catch {
-    return NextResponse.json({ error: '이미 존재하는 항목입니다' }, { status: 409 })
+  } catch (e: unknown) {
+    console.error('[categories POST error]', e)
+    if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2002') {
+      return NextResponse.json({ error: '이미 존재하는 항목입니다' }, { status: 409 })
+    }
+    return NextResponse.json({ error: 'DB 오류가 발생했습니다. 잠시 후 다시 시도해주세요.' }, { status: 500 })
   }
 }
 

@@ -148,8 +148,10 @@ export default function SettingsPage() {
     const groups = getGroups(type)
     if (groups.some(g => g.group === name)) return showToast('이미 존재하는 그룹입니다')
     const sortOrder = groups.length
-    await apiPost({ type, name: '__group__', group: name, sortOrder })
+    const res = await apiPost({ type, name: '__group__', group: name, sortOrder })
+    if (!res.ok) return showToast((await res.json()).error ?? '오류가 발생했습니다')
     setGrpInputs(p => ({ ...p, [type]: '' }))
+    setCollapsed(p => ({ ...p, [`${type}|${name}`]: false }))
     showToast(`"${name}" 그룹 추가 ✓`)
     fetchCats()
   }
@@ -184,8 +186,14 @@ export default function SettingsPage() {
     const name = inputs[key]?.trim()
     if (!name) return
     const res = await apiPost({ type, name, group })
-    if (res.ok) { setInputs(p => ({ ...p, [key]: '' })); showToast(`"${name}" 추가 ✓`); fetchCats() }
-    else showToast((await res.json()).error ?? '오류')
+    if (res.ok) {
+      setInputs(p => ({ ...p, [key]: '' }))
+      if (group) setCollapsed(p => ({ ...p, [`${type}|${group}`]: false }))
+      showToast(`"${name}" 추가 ✓`)
+      fetchCats()
+    } else {
+      showToast((await res.json()).error ?? '오류')
+    }
   }
 
   // ── 아이템 수정 ──
