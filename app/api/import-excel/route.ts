@@ -78,6 +78,7 @@ export async function POST(req: NextRequest) {
     const url = new URL(req.url)
     const dryRun = url.searchParams.get('dryRun') === 'true'
     const skipDuplicates = url.searchParams.get('skipDuplicates') !== 'false'
+    const skipInFileDuplicates = url.searchParams.get('skipInFileDuplicates') !== 'false'
 
     const formData = await req.formData()
     const files = formData.getAll('files') as File[]
@@ -114,6 +115,7 @@ export async function POST(req: NextRequest) {
     let imported = 0
     let skipped  = 0
     let duplicates = 0
+    let inFileDuplicates = 0
     const errors: string[] = []
     const newTxs: {
       sessionId: number; date: string; desc: string; amount: number;
@@ -157,13 +159,16 @@ export async function POST(req: NextRequest) {
           if (!parsed) { skipped++; continue }
 
           const key = `${parsed.date}|${parsed.desc}|${parsed.amount}|${parsed.fromAcct}|${parsed.toAcct}`
-          if (importedSet.has(key)) { skipped++; continue }
+          if (importedSet.has(key)) {
+            inFileDuplicates++
+            if (skipInFileDuplicates) { skipped++; continue }
+          } else {
+            importedSet.add(key)
+          }
           if (existingTxSet.has(key)) {
             duplicates++
             if (skipDuplicates) { continue }
           }
-          importedSet.add(key)
-
           ensureCategory(parsed.fromAcct, parsed.fromPrefix)
           ensureCategory(parsed.toAcct,   parsed.toPrefix)
 
@@ -186,7 +191,7 @@ export async function POST(req: NextRequest) {
     }
 
     if (dryRun) {
-      return NextResponse.json({ toImport: newTxs.length, duplicates, errors: errors.slice(0, 10) })
+      return NextResponse.json({ toImport: newTxs.length, duplicates, inFileDuplicates, errors: errors.slice(0, 10) })
     }
 
     // ── 일괄 DB 저장 ──
@@ -211,7 +216,7 @@ export async function POST(req: NextRequest) {
       } catch {}
     }
 
-    return NextResponse.json({ imported, skipped, duplicates, errors: errors.slice(0, 10) })
+    return NextResponse.json({ imported, skipped, duplicates, inFileDuplicates, errors: errors.slice(0, 10) })
   } catch (e) {
     console.error('[import-excel]', e)
     return NextResponse.json({ error: String(e) }, { status: 500 })

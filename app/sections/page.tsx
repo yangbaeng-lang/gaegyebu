@@ -26,6 +26,9 @@ export default function SectionsPage() {
   const [importing,    setImporting]    = useState(false)
   const [pendingFiles, setPendingFiles] = useState<File[] | null>(null)
   const [duplicateModal, setDuplicateModal] = useState<{ count: number } | null>(null)
+  const [inFileDuplicateModal, setInFileDuplicateModal] = useState<{ count: number } | null>(null)
+  const [pendingDuplicatesCount, setPendingDuplicatesCount] = useState(0)
+  const [pendingSkipInFileDuplicates, setPendingSkipInFileDuplicates] = useState(true)
 
   const fetchData = () =>
     Promise.all([
@@ -44,12 +47,12 @@ export default function SectionsPage() {
     window.location.href = '/'
   }
 
-  const runImport = async (files: File[], skipDuplicates: boolean) => {
+  const runImport = async (files: File[], skipDuplicates: boolean, skipInFileDuplicates: boolean = true) => {
     setImporting(true); setImportResult(null)
     const fd = new FormData()
     files.forEach(f => fd.append('files', f))
     try {
-      const res  = await fetch(`/api/import-excel?skipDuplicates=${skipDuplicates}`, { method: 'POST', body: fd })
+      const res  = await fetch(`/api/import-excel?skipDuplicates=${skipDuplicates}&skipInFileDuplicates=${skipInFileDuplicates}`, { method: 'POST', body: fd })
       const data = await res.json()
       if (res.ok) {
         setImportResult({ imported: data.imported ?? 0, skipped: data.skipped ?? 0, duplicates: data.duplicates })
@@ -80,7 +83,12 @@ export default function SectionsPage() {
         setImporting(false)
         return
       }
-      if ((data.duplicates ?? 0) > 0) {
+      if ((data.inFileDuplicates ?? 0) > 0) {
+        setPendingFiles(fileList)
+        setPendingDuplicatesCount(data.duplicates ?? 0)
+        setInFileDuplicateModal({ count: data.inFileDuplicates })
+        setImporting(false)
+      } else if ((data.duplicates ?? 0) > 0) {
         setPendingFiles(fileList)
         setDuplicateModal({ count: data.duplicates })
         setImporting(false)
@@ -93,12 +101,24 @@ export default function SectionsPage() {
     }
   }
 
+  const handleInFileDuplicateChoice = async (skipInFileDuplicates: boolean) => {
+    setInFileDuplicateModal(null)
+    setPendingSkipInFileDuplicates(skipInFileDuplicates)
+    if (pendingDuplicatesCount > 0) {
+      setDuplicateModal({ count: pendingDuplicatesCount })
+    } else {
+      const files = pendingFiles
+      setPendingFiles(null)
+      if (files) await runImport(files, true, skipInFileDuplicates)
+    }
+  }
+
   const handleDuplicateChoice = async (skipDuplicates: boolean) => {
     const files = pendingFiles
     setDuplicateModal(null)
     setPendingFiles(null)
     if (!files) return
-    await runImport(files, skipDuplicates)
+    await runImport(files, skipDuplicates, pendingSkipInFileDuplicates)
   }
 
   const createSection = async () => {
@@ -241,6 +261,39 @@ export default function SectionsPage() {
           섹션 만들기
         </button>
       </div>
+
+      {/* 파일 내 중복 확인 모달 */}
+      {inFileDuplicateModal && (
+        <div className="fixed inset-0 bg-black/30 z-50 flex items-center justify-center">
+          <div className="bg-white rounded-2xl p-5 w-80 shadow-xl">
+            <div className="flex items-center gap-2 mb-3">
+              <i className="ti ti-alert-triangle text-amber-500 text-lg" />
+              <h3 className="text-[15px] font-semibold text-gray-800">파일 내 중복 발견</h3>
+            </div>
+            <p className="text-[13px] text-gray-600 mb-4">
+              가져올 파일 안에 동일한 항목이 <span className="font-semibold text-gray-800">{inFileDuplicateModal.count}건</span> 중복되어 있습니다.<br />
+              중복 항목을 어떻게 처리할까요?
+            </p>
+            <div className="flex flex-col gap-2">
+              <button
+                onClick={() => handleInFileDuplicateChoice(false)}
+                className="w-full py-2 text-[13px] font-semibold bg-[#1a1f2e] text-white rounded-lg hover:opacity-90 transition-opacity">
+                중복 포함하여 가져오기
+              </button>
+              <button
+                onClick={() => handleInFileDuplicateChoice(true)}
+                className="w-full py-2 text-[13px] font-semibold border border-gray-200 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors">
+                중복 제외하고 가져오기
+              </button>
+              <button
+                onClick={() => { setInFileDuplicateModal(null); setPendingFiles(null) }}
+                className="w-full py-2 text-[13px] font-medium text-gray-400 hover:text-gray-600 transition-colors">
+                취소
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* 중복 데이터 확인 모달 */}
       {duplicateModal && (
