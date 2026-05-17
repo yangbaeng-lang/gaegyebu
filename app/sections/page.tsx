@@ -18,6 +18,8 @@ export default function SectionsPage() {
   const [sections,    setSections]    = useState<SectionSummary[]>([])
   const [loading,     setLoading]     = useState(true)
   const [currentSid,  setCurrentSid]  = useState(1)
+  const [dragIndex,     setDragIndex]     = useState<number | null>(null)
+  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null)
   const [showModal,   setShowModal]   = useState(false)
   const [newName,     setNewName]     = useState('')
   const [createMode,  setCreateMode]  = useState<'copy' | 'fresh'>('fresh')
@@ -41,6 +43,29 @@ export default function SectionsPage() {
     })
 
   useEffect(() => { fetchData() }, [])
+
+  const handleDragStart = (index: number) => setDragIndex(index)
+
+  const handleDragOver = (e: React.DragEvent, index: number) => {
+    e.preventDefault()
+    setDragOverIndex(index)
+  }
+
+  const handleDrop = async (index: number) => {
+    if (dragIndex === null || dragIndex === index) {
+      setDragIndex(null); setDragOverIndex(null); return
+    }
+    const next = [...sections]
+    const [moved] = next.splice(dragIndex, 1)
+    next.splice(index, 0, moved)
+    setSections(next)
+    setDragIndex(null); setDragOverIndex(null)
+    await fetch('/api/sessions', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ order: next.map(s => s.id) }),
+    })
+  }
 
   const switchSection = async (id: number) => {
     await fetch(`/api/sessions/${id}`, { method: 'POST' })
@@ -214,17 +239,28 @@ export default function SectionsPage() {
               <div className="px-5 py-10 text-center text-[13px] text-gray-300">섹션이 없습니다</div>
             ) : (
               <div className="divide-y divide-gray-50">
-                {sections.map(s => (
+                {sections.map((s, i) => (
                   <div
                     key={s.id}
+                    draggable
+                    onDragStart={() => handleDragStart(i)}
+                    onDragOver={(e) => handleDragOver(e, i)}
+                    onDrop={() => handleDrop(i)}
+                    onDragEnd={() => { setDragIndex(null); setDragOverIndex(null) }}
                     onClick={() => switchSection(s.id)}
-                    className={`grid grid-cols-4 px-5 py-4 cursor-pointer transition-colors group
+                    className={`grid grid-cols-4 px-5 py-4 cursor-pointer transition-all group border-t-2
+                      ${dragOverIndex === i && dragIndex !== i ? 'border-[#6b8cff]' : 'border-transparent'}
+                      ${dragIndex === i ? 'opacity-40' : ''}
                       ${s.id === currentSid ? 'bg-[#6b8cff]/5' : 'hover:bg-gray-50'}`}>
                     <div className="flex items-center gap-2">
+                      <i
+                        className="ti ti-grip-vertical text-gray-300 hover:text-gray-400 cursor-grab flex-shrink-0"
+                        onClick={e => e.stopPropagation()}
+                      />
                       {s.id === currentSid && (
                         <span className="w-1.5 h-1.5 rounded-full bg-[#6b8cff] flex-shrink-0" />
                       )}
-                      <div className={s.id !== currentSid ? 'pl-3.5' : ''}>
+                      <div className={s.id !== currentSid ? '' : ''}>
                         <p className={`text-[15px] font-semibold ${s.id === currentSid ? 'text-[#6b8cff]' : 'text-gray-800 group-hover:text-gray-900'}`}>
                           {s.name}
                         </p>

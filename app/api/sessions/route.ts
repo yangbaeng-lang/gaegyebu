@@ -11,9 +11,17 @@ async function ensureDefaultSession() {
 
 export async function GET(req: NextRequest) {
   await ensureDefaultSession()
-  const sessions = await prisma.session.findMany({ orderBy: { id: 'asc' } })
+  const sessions = await prisma.session.findMany({ orderBy: [{ sortOrder: 'asc' }, { id: 'asc' }] })
   const current  = getSid(req)
   return NextResponse.json({ sessions, current })
+}
+
+export async function PATCH(req: NextRequest) {
+  const { order } = await req.json() as { order: number[] }
+  await Promise.all(
+    order.map((id, index) => prisma.session.update({ where: { id }, data: { sortOrder: index } }))
+  )
+  return NextResponse.json({ ok: true })
 }
 
 export async function POST(req: NextRequest) {
@@ -21,7 +29,9 @@ export async function POST(req: NextRequest) {
   const { name, mode, sourceId } = await req.json()
   const sid = sourceId ?? getSid(req)
 
-  const newSession = await prisma.session.create({ data: { name: name ?? '새 세션' } })
+  const maxSession = await prisma.session.findFirst({ orderBy: { sortOrder: 'desc' } })
+  const sortOrder = (maxSession?.sortOrder ?? -1) + 1
+  const newSession = await prisma.session.create({ data: { name: name ?? '새 세션', sortOrder } })
   const nid = newSession.id
 
   if (mode === 'copy') {

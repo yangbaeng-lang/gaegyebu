@@ -4,7 +4,7 @@ import prisma from '@/lib/db'
 export const dynamic = 'force-dynamic'
 
 export async function GET() {
-  const sessions = await prisma.session.findMany({ orderBy: { id: 'asc' } })
+  const sessions = await prisma.session.findMany({ orderBy: [{ sortOrder: 'asc' }, { id: 'asc' }] })
 
   const results = await Promise.all(
     sessions.map(async (s) => {
