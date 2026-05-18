@@ -11,12 +11,25 @@ export async function GET(req: NextRequest) {
 
   if (!from || !to) return NextResponse.json({ summary: {}, categories: [], trend: [], dowPattern: [] })
 
-  const txs = await prisma.transaction.findMany({
-    where: { sessionId: sid, date: { gte: from, lte: to } },
-    orderBy: { date: 'asc' },
-  })
+  const [txs, incomeCats] = await Promise.all([
+    prisma.transaction.findMany({
+      where: { sessionId: sid, date: { gte: from, lte: to } },
+      orderBy: { date: 'asc' },
+    }),
+    prisma.category.findMany({
+      where: { sessionId: sid, type: 'income', name: { not: '__group__' } },
+      select: { name: true },
+    }),
+  ])
 
-  const income  = txs.filter(t => t.type === 'income'  || t.type === 'income_expense').reduce((s, t) => s + t.amount, 0)
+  const incomeCatNames = new Set(incomeCats.map(c => c.name))
+
+  // type='expense'여도 fromAcct가 수익 계정이면 수익으로 취급
+  const isIncomeSource = (tx: typeof txs[number]) =>
+    tx.type === 'income' || tx.type === 'income_expense' ||
+    (tx.type === 'expense' && incomeCatNames.has(tx.fromAcct))
+
+  const income  = txs.filter(isIncomeSource).reduce((s, t) => s + t.amount, 0)
   const expense = txs.filter(t => t.type === 'expense' || t.type === 'income_expense').reduce((s, t) => s + t.amount, 0)
 
   const catMap: Record<string, number> = {}
@@ -26,7 +39,7 @@ export async function GET(req: NextRequest) {
   const categories = Object.entries(catMap).map(([name, amount]) => ({ name, amount })).sort((a, b) => b.amount - a.amount)
 
   const incCatMap: Record<string, number> = {}
-  for (const tx of txs.filter(t => t.type === 'income' || t.type === 'income_expense')) {
+  for (const tx of txs.filter(isIncomeSource)) {
     incCatMap[tx.fromAcct] = (incCatMap[tx.fromAcct] ?? 0) + tx.amount
   }
   const incomeCategories = Object.entries(incCatMap).map(([name, amount]) => ({ name, amount })).sort((a, b) => b.amount - a.amount)
@@ -54,7 +67,7 @@ export async function GET(req: NextRequest) {
         return prisma.transaction.findMany({
           where: { sessionId: sid, date: { gte: `${ym}-01`, lte: `${ym}-31` } },
         }).then(rows => {
-          const income  = rows.filter(r => r.type === 'income'  || r.type === 'income_expense').reduce((s, r) => s + r.amount, 0)
+          const income  = rows.filter(r => r.type === 'income' || r.type === 'income_expense' || (r.type === 'expense' && incomeCatNames.has(r.fromAcct))).reduce((s, r) => s + r.amount, 0)
           const expense = rows.filter(r => r.type === 'expense' || r.type === 'income_expense').reduce((s, r) => s + r.amount, 0)
           return { label: `${m + 1}월`, income, expense, net: income - expense }
         })
@@ -72,7 +85,7 @@ export async function GET(req: NextRequest) {
         return prisma.transaction.findMany({
           where: { sessionId: sid, date: { gte: qFrom, lte: qTo } },
         }).then(rows => {
-          const income  = rows.filter(r => r.type === 'income'  || r.type === 'income_expense').reduce((s, r) => s + r.amount, 0)
+          const income  = rows.filter(r => r.type === 'income' || r.type === 'income_expense' || (r.type === 'expense' && incomeCatNames.has(r.fromAcct))).reduce((s, r) => s + r.amount, 0)
           const expense = rows.filter(r => r.type === 'expense' || r.type === 'income_expense').reduce((s, r) => s + r.amount, 0)
           return { label: `${y} Q${q}`, income, expense, net: income - expense }
         })
@@ -85,7 +98,7 @@ export async function GET(req: NextRequest) {
         return prisma.transaction.findMany({
           where: { sessionId: sid, date: { gte: `${y}-01-01`, lte: `${y}-12-31` } },
         }).then(rows => {
-          const income  = rows.filter(r => r.type === 'income'  || r.type === 'income_expense').reduce((s, r) => s + r.amount, 0)
+          const income  = rows.filter(r => r.type === 'income' || r.type === 'income_expense' || (r.type === 'expense' && incomeCatNames.has(r.fromAcct))).reduce((s, r) => s + r.amount, 0)
           const expense = rows.filter(r => r.type === 'expense' || r.type === 'income_expense').reduce((s, r) => s + r.amount, 0)
           return { label: `${y}년`, income, expense, net: income - expense }
         })

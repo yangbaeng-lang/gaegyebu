@@ -7,22 +7,25 @@ export async function GET(req: NextRequest) {
   const toParam   = req.nextUrl.searchParams.get('to')
   const sid       = getSid(req)
 
-  const cats = await prisma.category.findMany({
-    where: { sessionId: sid, type: { in: ['account_asset', 'account_liability'] } },
-    orderBy: [{ sortOrder: 'asc' }, { id: 'asc' }],
-  })
+  const [cats, items] = await Promise.all([
+    prisma.category.findMany({
+      where: { sessionId: sid, type: { in: ['account_asset', 'account_liability'] } },
+      orderBy: [{ sortOrder: 'asc' }, { id: 'asc' }],
+    }),
+    prisma.asset.findMany({ where: { sessionId: sid } }),
+  ])
   const orderMap: Record<string, number> = {}
   cats.forEach((c, i) => { orderMap[c.name] = i })
-
-  const items = await prisma.asset.findMany({ where: { sessionId: sid } })
   const kindMap: Record<string, string> = {}
   items.forEach(a => { kindMap[a.type] = a.kind })
 
   let amounts: Record<string, number>
 
   const cutoff = toParam ?? (yearMonth ? `${yearMonth}-31` : null)
+  const today  = new Date().toISOString().slice(0, 10)
 
-  if (cutoff) {
+  // cutoff가 오늘 이후면 assets 테이블 현재값이 이미 최신 → 트랜잭션 재생 불필요
+  if (cutoff && cutoff < today) {
     const txs = await prisma.transaction.findMany({
       where: { sessionId: sid, date: { lte: cutoff } },
       orderBy: { date: 'asc' },
@@ -57,6 +60,8 @@ export async function GET(req: NextRequest) {
   return NextResponse.json({
     assets, liabilities,
     summary: { totalAssets, totalLiab, netWorth: totalAssets - totalLiab },
+  }, {
+    headers: { 'Cache-Control': 'private, max-age=5, stale-while-revalidate=15' },
   })
 }
 

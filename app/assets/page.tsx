@@ -58,11 +58,11 @@ export default function AssetsPage() {
   const lastDragIdx  = useRef(-1)
 
   const fetchData = async () => {
-    const catRes  = await fetch('/api/categories')
-    const catJson = await catRes.json()
+    const [catJson, json] = await Promise.all([
+      fetch('/api/categories').then(r => r.json()),
+      fetch(`/api/assets?to=${period.dateTo}`).then(r => r.json()),
+    ])
     setCats(catJson.raw ?? [])
-    const res  = await fetch(`/api/assets?to=${period.dateTo}`)
-    const json = await res.json()
     setAssets(json.assets)
     setLiabilities(json.liabilities)
     setSummary(json.summary)
@@ -113,6 +113,7 @@ export default function AssetsPage() {
   const editToGroups = [
     { label: '자산 계정',     opts: catsByType('account_asset')     },
     { label: '부채 계정',     opts: catsByType('account_liability') },
+    { label: '수입 분류',     opts: catsByType('income')            },
     { label: '지출 카테고리', opts: catsByType('expense')           },
     { label: '순자산 분류',   opts: catsByType('networth')          },
   ]

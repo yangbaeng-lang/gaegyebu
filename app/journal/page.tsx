@@ -98,10 +98,14 @@ export default function JournalPage() {
   const [dateTo,     setDateTo]     = useState('')
   const [sortBy,     setSortBy]     = useState('date_desc')
   const [toast,      setToast]      = useState('')
-  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set())
+  const [selectedIds,     setSelectedIds]     = useState<Set<number>>(new Set())
+  const [mainSelectedIds, setMainSelectedIds] = useState<Set<number>>(new Set())
   const panelMouseDownRef = useRef(false)
   const panelDragStartIdx = useRef(-1)
   const panelLastDragIdx  = useRef(-1)
+  const mainMouseDownRef  = useRef(false)
+  const mainDragStartIdx  = useRef(-1)
+  const mainLastDragIdx   = useRef(-1)
 
   const fetchTxs = async () => {
     const from = dateFrom || period.dateFrom
@@ -118,6 +122,7 @@ export default function JournalPage() {
   }, [])
 
   useEffect(() => { fetchTxs() }, [period.dateFrom, period.dateTo, dateFrom, dateTo])
+  useEffect(() => { setMainSelectedIds(new Set()) }, [period.dateFrom, period.dateTo, dateFrom, dateTo, typeFilter, q])
   useEffect(() => {
     fetch('/api/sessions').then(r => r.json()).then(d => setSessionId(d.current ?? 1))
   }, [])
@@ -176,6 +181,32 @@ export default function JournalPage() {
     })
   }, [])
 
+  const handleMainMouseDown = useCallback((idx: number, txId: number, e: React.MouseEvent) => {
+    e.preventDefault()
+    mainMouseDownRef.current = true
+    mainDragStartIdx.current = idx
+    mainLastDragIdx.current  = idx
+    setMainSelectedIds(prev => {
+      const next = new Set(prev)
+      if (next.has(txId)) next.delete(txId); else next.add(txId)
+      return next
+    })
+  }, [])
+
+  const handleMainMouseEnter = useCallback((idx: number, list: { id: number }[]) => {
+    if (!mainMouseDownRef.current) return
+    const lo = Math.min(mainDragStartIdx.current, idx)
+    const hi = Math.max(mainDragStartIdx.current, idx)
+    if (lo === Math.min(mainDragStartIdx.current, mainLastDragIdx.current) &&
+        hi === Math.max(mainDragStartIdx.current, mainLastDragIdx.current)) return
+    mainLastDragIdx.current = idx
+    setMainSelectedIds(() => {
+      const next = new Set<number>()
+      for (let i = lo; i <= hi; i++) next.add(list[i].id)
+      return next
+    })
+  }, [])
+
   const handleEditSave = async () => {
     if (!editForm) return
     await fetch(`/api/transactions/${editForm.id}`, {
@@ -217,6 +248,7 @@ export default function JournalPage() {
   // 변환 및 필터
   const typeMap = useMemo(() => buildTypeMap(cats), [cats])
   const entries = useMemo(() => txs.map(tx => toEntry(tx, typeMap)), [txs, typeMap])
+
 
   const filtered = useMemo(() => {
     const list = entries
@@ -282,6 +314,31 @@ export default function JournalPage() {
     else setSelectedIds(new Set(currentPanelIds))
   }
 
+  // 메인 목록 전체선택/삭제
+  const allMainSelected = filtered.length > 0 && filtered.every(e => mainSelectedIds.has(e.txId))
+
+  const handleMainSelectAll = () => {
+    if (allMainSelected) setMainSelectedIds(new Set())
+    else setMainSelectedIds(new Set(filtered.map(e => e.txId)))
+  }
+
+  const mainSelAmount = useMemo(() =>
+    filtered.filter(e => mainSelectedIds.has(e.txId)).reduce((s, e) => s + e.dr.amount, 0)
+  , [filtered, mainSelectedIds])
+
+  const handleDeleteMainSelected = async () => {
+    if (mainSelectedIds.size === 0) return
+    const ids = Array.from(mainSelectedIds)
+    if (!confirm(`선택한 ${ids.length}건을 삭제하시겠습니까?`)) return
+    await Promise.all(ids.map(id => fetch(`/api/transactions/${id}`, { method: 'DELETE' })))
+    for (const tx of txs.filter(t => ids.includes(t.id))) {
+      restoreQuickTxDate(sessionId, tx.desc, tx.date)
+    }
+    setMainSelectedIds(new Set())
+    showToast(`${ids.length}건 삭제됐습니다`)
+    fetchTxs()
+  }
+
   // 수정 모달용 드롭다운 그룹
   const editFromGroups = [
     { label: '자산 계정',  opts: cats.account_asset     },
@@ -292,6 +349,7 @@ export default function JournalPage() {
   const editToGroups = [
     { label: '자산 계정',     opts: cats.account_asset     },
     { label: '부채 계정',     opts: cats.account_liability },
+    { label: '수입 분류',     opts: cats.income            },
     { label: '지출 카테고리', opts: cats.expense           },
     { label: '순자산 분류',   opts: cats.networth          },
   ]
@@ -378,10 +436,33 @@ export default function JournalPage() {
                   <i className="ti ti-search" />
                 </button>
               </div>
+              {/* 선택 삭제 영역 */}
+              {filtered.length > 0 && (
+                <div className="flex items-center gap-2 ml-auto flex-shrink-0">
+                  {mainSelectedIds.size > 0 && (
+                    <>
+                      <span className="text-xs text-blue-600 bg-blue-50 border border-blue-200 px-2 py-0.5 rounded-full">
+                        {mainSelectedIds.size}건 · {fmt(mainSelAmount)}
+                      </span>
+                      <button onClick={handleDeleteMainSelected}
+                        className="text-xs text-red-500 bg-red-50 border border-red-200 px-2 py-0.5 rounded-full hover:bg-red-100 transition-colors flex items-center gap-0.5">
+                        <i className="ti ti-trash text-[10px]" />선택 삭제
+                      </button>
+                    </>
+                  )}
+                  <button onClick={handleMainSelectAll}
+                    className="text-xs text-blue-500 hover:text-blue-700 flex items-center gap-0.5 transition-colors">
+                    <i className={`ti ${allMainSelected ? 'ti-square-minus' : 'ti-square-check'} text-[10px]`} />
+                    {allMainSelected ? '전체 해제' : '전체 선택'}
+                  </button>
+                </div>
+              )}
             </div>
 
             {/* 거래내역 테이블 */}
-            <div className="bg-white border border-gray-100 rounded-xl overflow-hidden select-none">
+            <div className="bg-white border border-gray-100 rounded-xl overflow-hidden select-none"
+              onMouseUp={() => { mainMouseDownRef.current = false }}
+              onMouseLeave={() => { mainMouseDownRef.current = false }}>
 
               {filtered.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-16 text-gray-300 text-xs gap-2">
@@ -389,16 +470,23 @@ export default function JournalPage() {
                 </div>
               ) : (
                 <>
-                  {filtered.map((e) => {
+                  {filtered.map((e, idx) => {
                     const drMeta = ACCT_META[e.dr.acctType]
                     const crMeta = ACCT_META[e.cr.acctType]
                     const d = new Date(e.date)
-                    const isSel = selectedIds.has(e.txId)
+                    const isSel = mainSelectedIds.has(e.txId)
                     return (
                       <div key={e.txId}
-                        className={`grid items-center px-4 py-3 border-b border-gray-50 group text-sm transition-colors
+                        className={`grid items-center px-4 py-3 border-b border-gray-50 group text-sm transition-colors cursor-pointer
                           ${isSel ? 'bg-blue-50' : 'hover:bg-gray-50'}`}
-                        style={{ gridTemplateColumns: '110px 1.5fr 1fr 1fr 100px 100px 100px 56px' }}>
+                        style={{ gridTemplateColumns: '20px 110px 1.5fr 1fr 1fr 100px 100px 100px 56px' }}
+                        onMouseDown={ev => handleMainMouseDown(idx, e.txId, ev)}
+                        onMouseEnter={() => handleMainMouseEnter(idx, filtered.map(f => ({ id: f.txId })))}>
+                        {/* 체크박스 */}
+                        <span className={`w-3.5 h-3.5 rounded-sm border flex items-center justify-center flex-shrink-0 transition-colors
+                          ${isSel ? 'bg-blue-500 border-blue-500' : 'border-gray-300'}`}>
+                          {isSel && <i className="ti ti-check text-white" style={{ fontSize: '8px' }} />}
+                        </span>
                         {/* 날짜 */}
                         <div className="flex items-center gap-1.5 whitespace-nowrap">
                           <span className="text-gray-700 font-medium">{e.date}</span>
@@ -406,19 +494,19 @@ export default function JournalPage() {
                         </div>
                         {/* 내용 */}
                         <button className="text-left text-gray-700 font-medium truncate pr-2 hover:text-blue-600 transition-colors"
-                          onClick={() => openPanel({ type: 'desc', desc: e.desc })}>
+                          onClick={ev => { ev.stopPropagation(); openPanel({ type: 'desc', desc: e.desc }) }}>
                           {e.desc}
                         </button>
                         {/* 차변 계정 */}
                         <button className="flex items-center gap-1.5 min-w-0 text-left hover:opacity-70"
-                          onClick={() => openPanel({ type: 'account', name: e.dr.acctName, acctType: e.dr.acctType })}>
+                          onClick={ev => { ev.stopPropagation(); openPanel({ type: 'account', name: e.dr.acctName, acctType: e.dr.acctType }) }}>
                           <span className="text-[9px] px-1 py-0.5 rounded font-medium flex-shrink-0"
                             style={{ background: drMeta.bg, color: drMeta.color }}>{drMeta.label}</span>
                           <span className="text-xs text-gray-800 truncate">{e.dr.acctName}</span>
                         </button>
                         {/* 대변 계정 */}
                         <button className="flex items-center gap-1.5 min-w-0 text-left hover:opacity-70"
-                          onClick={() => openPanel({ type: 'account', name: e.cr.acctName, acctType: e.cr.acctType })}>
+                          onClick={ev => { ev.stopPropagation(); openPanel({ type: 'account', name: e.cr.acctName, acctType: e.cr.acctType }) }}>
                           <span className="text-[9px] px-1 py-0.5 rounded font-medium flex-shrink-0"
                             style={{ background: crMeta.bg, color: crMeta.color }}>{crMeta.label}</span>
                           <span className="text-xs text-gray-600 truncate">{e.cr.acctName}</span>
@@ -436,12 +524,12 @@ export default function JournalPage() {
                         </span>
                         {/* 수정/삭제 */}
                         <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity justify-end"
-                          onClick={ev => ev.stopPropagation()}>
-                          <button onClick={() => openEdit(e.tx)}
+                          onMouseDown={ev => ev.stopPropagation()}>
+                          <button onClick={ev => { ev.stopPropagation(); openEdit(e.tx) }}
                             className="w-6 h-6 flex items-center justify-center rounded text-gray-300 hover:text-blue-500 hover:bg-blue-50">
                             <i className="ti ti-pencil text-xs" />
                           </button>
-                          <button onClick={() => handleDelete(e.txId)}
+                          <button onClick={ev => { ev.stopPropagation(); handleDelete(e.txId) }}
                             className="w-6 h-6 flex items-center justify-center rounded text-gray-300 hover:text-red-500 hover:bg-red-50">
                             <i className="ti ti-trash text-xs" />
                           </button>
@@ -456,8 +544,8 @@ export default function JournalPage() {
                     const fCr = filtered.reduce((s, e) => s + e.cr.amount, 0)
                     return (
                       <div className="grid items-center px-4 py-2.5 bg-gray-50 border-t border-gray-200 text-xs font-semibold"
-                        style={{ gridTemplateColumns: '110px 1.5fr 1fr 1fr 100px 100px 100px 56px' }}>
-                        <span className="text-gray-500 col-span-4">{filtered.length}건 합계</span>
+                        style={{ gridTemplateColumns: '20px 110px 1.5fr 1fr 1fr 100px 100px 100px 56px' }}>
+                        <span className="text-gray-500 col-span-5">{filtered.length}건 합계</span>
                         <span className="text-right tabular-nums" style={{ color: '#4a6fdb' }}>{fmt(fDr)}</span>
                         <span className="text-right tabular-nums" style={{ color: '#f0a020' }}>{fmt(fCr)}</span>
                         <span className="col-span-2" />

@@ -358,6 +358,7 @@ export default function InsertPage() {
   const editToGroups = [
     { label: '자산 계정',     opts: cats.account_asset     },
     { label: '부채 계정',     opts: cats.account_liability },
+    { label: '수입 분류',     opts: cats.income            },
     { label: '지출 카테고리', opts: cats.expense           },
     { label: '순자산 분류',   opts: cats.networth          },
   ]

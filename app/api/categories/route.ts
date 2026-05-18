@@ -76,12 +76,6 @@ export async function GET(req: NextRequest) {
     orderBy: [{ type: 'asc' }, { sortOrder: 'asc' }, { id: 'asc' }],
   })
 
-  for (const c of cats) {
-    if (c.name === '__group__') continue
-    if (c.type === 'account_asset')     await syncAsset(c.name, 'asset',     sid)
-    if (c.type === 'account_liability') await syncAsset(c.name, 'liability', sid)
-  }
-
   const grouped = {
     account_asset:     [] as typeof cats,
     account_liability: [] as typeof cats,
@@ -97,7 +91,9 @@ export async function GET(req: NextRequest) {
     ...grouped.account_asset.map(c => c.name),
     ...grouped.account_liability.map(c => c.name),
   ]
-  return NextResponse.json({ grouped, raw: cats, account })
+  return NextResponse.json({ grouped, raw: cats, account }, {
+    headers: { 'Cache-Control': 'private, max-age=10, stale-while-revalidate=30' },
+  })
 }
 
 export async function POST(req: NextRequest) {
