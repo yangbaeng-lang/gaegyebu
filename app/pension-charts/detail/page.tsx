@@ -1,9 +1,9 @@
 'use client'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { fmt } from '@/lib/utils'
 import {
   ComposedChart, Bar, Line, XAxis, YAxis, Cell,
-  Tooltip as RechartTooltip, ResponsiveContainer, ReferenceLine,
+  Tooltip as RechartTooltip, ReferenceLine,
 } from 'recharts'
 
 type AssetMonthly = {
@@ -30,6 +30,76 @@ const TOOLTIP_STYLE = {
   fontWeight: 'bold' as const,
   color: '#374151',
   boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
+}
+
+const VISIBLE = 10
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function ScrollChart({ data, children }: { data: any[]; children: (w: number, h: number) => React.ReactNode }) {
+  const wrapRef     = useRef<HTMLDivElement>(null)
+  const [dims, setDims] = useState({ w: 0, h: 0 })
+  const dragging    = useRef(false)
+  const startX      = useRef(0)
+  const scrollLeft  = useRef(0)
+  const scrolledRef = useRef(false)
+
+  useEffect(() => {
+    const el = wrapRef.current
+    if (!el) return
+    const ro = new ResizeObserver(() => setDims({ w: el.clientWidth, h: el.clientHeight }))
+    ro.observe(el)
+    setDims({ w: el.clientWidth, h: el.clientHeight })
+    return () => ro.disconnect()
+  }, [])
+
+  useEffect(() => { scrolledRef.current = false }, [data])
+
+  useEffect(() => {
+    if (dims.w === 0 || scrolledRef.current) return
+    scrolledRef.current = true
+    requestAnimationFrame(() => {
+      if (wrapRef.current) wrapRef.current.scrollLeft = wrapRef.current.scrollWidth
+    })
+  }, [dims.w, data])
+
+  const onDown = (e: React.MouseEvent) => {
+    dragging.current   = true
+    startX.current     = e.pageX - (wrapRef.current?.offsetLeft ?? 0)
+    scrollLeft.current = wrapRef.current?.scrollLeft ?? 0
+  }
+  const onMove = (e: React.MouseEvent) => {
+    if (!dragging.current || !wrapRef.current) return
+    e.preventDefault()
+    wrapRef.current.scrollLeft = scrollLeft.current - (e.pageX - (wrapRef.current.offsetLeft ?? 0) - startX.current)
+  }
+  const onUp = () => { dragging.current = false }
+
+  const barW   = dims.w > 0 ? Math.floor(dims.w / VISIBLE) : 60
+  const innerW = data.length > VISIBLE ? data.length * barW : dims.w
+
+  return (
+    <>
+      <style>{`
+        .pd-scroll::-webkit-scrollbar{height:6px}
+        .pd-scroll::-webkit-scrollbar-track{background:#f1f5f9;border-radius:3px}
+        .pd-scroll::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:3px;min-width:24px}
+        .pd-scroll::-webkit-scrollbar-thumb:hover{background:#94a3b8}
+      `}</style>
+      <div
+        ref={wrapRef}
+        className="pd-scroll overflow-x-auto h-full select-none"
+        style={{ cursor: dragging.current ? 'grabbing' : 'grab' }}
+        onMouseDown={onDown}
+        onMouseMove={onMove}
+        onMouseUp={onUp}
+        onMouseLeave={onUp}
+      >
+        <div style={{ width: innerW, height: '100%' }}>
+          {dims.w > 0 && dims.h > 0 && children(innerW, dims.h)}
+        </div>
+      </div>
+    </>
+  )
 }
 
 export default function PensionDetailPage() {
@@ -63,7 +133,6 @@ export default function PensionDetailPage() {
       .finally(() => setLoading(false))
   }, [pensionSid, selectedYear])
 
-  // 자산별 월별 차트 데이터 조합
   const assetCharts = assetOrder.map(summary => {
     const chartData = monthlyData
       .map(entry => {
@@ -157,42 +226,46 @@ export default function PensionDetailPage() {
                   </div>
                 </div>
 
-                {/* 시계열 차트 */}
+                {/* 드래그 스크롤 차트 */}
                 <div className="px-3 pt-3 pb-0">
-                  <ResponsiveContainer width="100%" height={210}>
-                    <ComposedChart data={chartData} margin={{ top: 10, right: 42, bottom: 5, left: 0 }}>
-                      <XAxis dataKey="month"
-                        tick={{ fontSize: 10, fill: '#9ca3af' }} axisLine={false} tickLine={false} />
-                      <YAxis yAxisId="left"
-                        tick={{ fontSize: 9, fill: '#9ca3af' }}
-                        tickFormatter={v => v === 0 ? '0' : `${v}만`}
-                        axisLine={false} tickLine={false} width={46} />
-                      <YAxis yAxisId="right" orientation="right"
-                        tick={{ fontSize: 9, fill: '#a78bfa' }}
-                        tickFormatter={v => `${v}%`}
-                        axisLine={false} tickLine={false} width={38} />
-                      <RechartTooltip contentStyle={TOOLTIP_STYLE}
-                        formatter={(value: unknown, name: string) => {
-                          const v = Number(value)
-                          if (name === '수익률') return [`${v >= 0 ? '+' : ''}${v.toFixed(2)}%`, name]
-                          return [`${v}만원`, name]
-                        }} />
-                      <ReferenceLine yAxisId="left" y={0} stroke="#e5e7eb" />
+                  <div style={{ height: 210 }}>
+                    <ScrollChart data={chartData}>
+                      {(w, h) => (
+                        <ComposedChart data={chartData} width={w} height={h}
+                          margin={{ top: 10, right: 42, bottom: 5, left: 0 }}>
+                          <XAxis dataKey="month"
+                            tick={{ fontSize: 10, fill: '#9ca3af' }} axisLine={false} tickLine={false} interval={0} />
+                          <YAxis yAxisId="left"
+                            tick={{ fontSize: 9, fill: '#9ca3af' }}
+                            tickFormatter={v => v === 0 ? '0' : `${v}만`}
+                            axisLine={false} tickLine={false} width={46} />
+                          <YAxis yAxisId="right" orientation="right"
+                            tick={{ fontSize: 9, fill: '#a78bfa' }}
+                            tickFormatter={v => `${v}%`}
+                            axisLine={false} tickLine={false} width={38} />
+                          <RechartTooltip contentStyle={TOOLTIP_STYLE}
+                            formatter={(value: unknown, name: string) => {
+                              const v = Number(value)
+                              if (name === '수익률') return [`${v >= 0 ? '+' : ''}${v.toFixed(2)}%`, name]
+                              return [`${v}만원`, name]
+                            }} />
+                          <ReferenceLine yAxisId="left" y={0} stroke="#e5e7eb" />
 
-                      {/* 누적 막대: 납입액(하단) + 평가손익(상단) */}
-                      <Bar yAxisId="left" dataKey="납입액"   name="납입액"   stackId="a" fill="#c7d2fe" maxBarSize={28} />
-                      <Bar yAxisId="left" dataKey="평가손익" name="평가손익" stackId="a" maxBarSize={28}>
-                        {chartData.map((entry, i) => (
-                          <Cell key={i} fill={(entry.평가손익 ?? 0) >= 0 ? '#86efac' : '#fca5a5'} />
-                        ))}
-                      </Bar>
+                          <Bar yAxisId="left" dataKey="납입액"   name="납입액"   stackId="a" fill="#c7d2fe" maxBarSize={28} />
+                          <Bar yAxisId="left" dataKey="평가손익" name="평가손익" stackId="a" maxBarSize={28}>
+                            {chartData.map((entry, i) => (
+                              <Cell key={i} fill={(entry.평가손익 ?? 0) >= 0 ? '#86efac' : '#fca5a5'} />
+                            ))}
+                          </Bar>
 
-                      <Line yAxisId="right" type="monotone" dataKey="수익률" name="수익률"
-                        stroke="#8b5cf6" strokeWidth={2}
-                        dot={{ r: 3, fill: '#8b5cf6', strokeWidth: 0 }}
-                        activeDot={{ r: 5 }} connectNulls={false} />
-                    </ComposedChart>
-                  </ResponsiveContainer>
+                          <Line yAxisId="right" type="monotone" dataKey="수익률" name="수익률"
+                            stroke="#8b5cf6" strokeWidth={2}
+                            dot={{ r: 3, fill: '#8b5cf6', strokeWidth: 0 }}
+                            activeDot={{ r: 5 }} connectNulls={false} />
+                        </ComposedChart>
+                      )}
+                    </ScrollChart>
+                  </div>
 
                   {/* 범례 */}
                   <div className="flex items-center gap-4 justify-center pb-3 text-[10px] text-gray-400">
