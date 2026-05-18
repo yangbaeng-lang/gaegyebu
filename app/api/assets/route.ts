@@ -19,34 +19,29 @@ export async function GET(req: NextRequest) {
   const kindMap: Record<string, string> = {}
   items.forEach(a => { kindMap[a.type] = a.kind })
 
-  let amounts: Record<string, number>
-
   const cutoff = toParam ?? (yearMonth ? `${yearMonth}-31` : null)
   const today  = new Date().toISOString().slice(0, 10)
 
-  // cutoff가 오늘 이후면 assets 테이블 현재값이 이미 최신 → 트랜잭션 재생 불필요
-  if (cutoff && cutoff < today) {
-    const txs = await prisma.transaction.findMany({
-      where: { sessionId: sid, date: { lte: cutoff } },
-      orderBy: { date: 'asc' },
-    })
+  // 미래 날짜 cutoff는 오늘까지만 계산, 항상 트랜잭션 재계산으로 일관성 유지
+  const replayTo = cutoff ? (cutoff > today ? today : cutoff) : today
 
-    amounts = {}
-    const applyDelta = (acct: string, delta: number) => {
-      const kind = kindMap[acct]
-      if (!kind) return
-      const actual = kind === 'liability' ? -delta : delta
-      amounts[acct] = (amounts[acct] ?? 0) + actual
-    }
+  const txs = await prisma.transaction.findMany({
+    where: { sessionId: sid, date: { lte: replayTo } },
+    orderBy: { date: 'asc' },
+  })
 
-    for (const tx of txs) {
-      if (tx.type === 'income')   { applyDelta(tx.toAcct, tx.amount) }
-      if (tx.type === 'expense')  { applyDelta(tx.fromAcct, -tx.amount) }
-      if (tx.type === 'transfer') { applyDelta(tx.fromAcct, -tx.amount); applyDelta(tx.toAcct, tx.amount) }
-    }
-  } else {
-    amounts = {}
-    items.forEach(a => { amounts[a.type] = a.amount })
+  const amounts: Record<string, number> = {}
+  const applyDelta = (acct: string, delta: number) => {
+    const kind = kindMap[acct]
+    if (!kind) return
+    const actual = kind === 'liability' ? -delta : delta
+    amounts[acct] = (amounts[acct] ?? 0) + actual
+  }
+
+  for (const tx of txs) {
+    if (tx.type === 'income')   { applyDelta(tx.toAcct, tx.amount) }
+    if (tx.type === 'expense')  { applyDelta(tx.fromAcct, -tx.amount) }
+    if (tx.type === 'transfer') { applyDelta(tx.fromAcct, -tx.amount); applyDelta(tx.toAcct, tx.amount) }
   }
 
   const sorted = items.sort((a, b) => (orderMap[a.type] ?? 99) - (orderMap[b.type] ?? 99))
