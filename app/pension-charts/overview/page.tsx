@@ -236,15 +236,15 @@ export default function PensionChartsOverviewPage() {
   )
 
   return (
-    <div className="flex-1 flex flex-col overflow-hidden bg-gray-50">
+    <div className="flex-1 flex flex-col overflow-y-auto md:overflow-hidden bg-gray-50">
 
       {/* 헤더 */}
-      <div className="px-8 pt-4 pb-2 flex-shrink-0">
+      <div className="px-4 md:px-8 pt-4 pb-2 flex-shrink-0">
         <h1 className="text-lg font-bold text-gray-800">연금 전체 현황</h1>
       </div>
 
       {/* 그룹 토글 */}
-      <div className="px-8 pb-2 flex items-center gap-2 flex-wrap flex-shrink-0">
+      <div className="px-4 md:px-8 pb-2 flex items-center gap-2 flex-wrap flex-shrink-0">
         {groupOrder.map((grp, i) => {
           const on    = visibleGroups.has(grp)
           const color = GROUP_COLORS[i % GROUP_COLORS.length]
@@ -261,13 +261,13 @@ export default function PensionChartsOverviewPage() {
       </div>
 
       {/* 차트 영역 */}
-      <div className="flex-1 min-h-0 px-8 pb-4 flex flex-col gap-3">
+      <div className="px-4 pb-4 flex flex-col gap-3 md:flex-1 md:min-h-0 md:px-8">
 
         {/* Row 1: 요약 + 그룹 비교 */}
-        <div className="flex gap-3 min-h-0" style={{ flex: 3 }}>
+        <div className="flex flex-col gap-3 md:flex-row md:min-h-0" style={{ flex: 3 }}>
 
           {/* 요약 카드 */}
-          <div className="w-[352px] flex-shrink-0 bg-white rounded-2xl border border-gray-100 shadow-sm px-4 py-4 flex flex-col">
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm px-4 py-4 flex flex-col md:w-[352px] md:flex-shrink-0">
             <SummaryRow label="총 납입액" value={total납입액}
               color="text-[#4a6fdb]" bg="bg-[#4a6fdb]/10" icon="ti-wallet" />
             <div className="border-t border-gray-100 my-2" />
@@ -295,7 +295,7 @@ export default function PensionChartsOverviewPage() {
           </div>
 
           {/* 그룹 비교 */}
-          <div className="flex-1 min-w-0 bg-white rounded-2xl border border-gray-100 shadow-sm p-4 flex flex-col">
+          <div className="h-[240px] bg-white rounded-2xl border border-gray-100 shadow-sm p-4 flex flex-col md:h-auto md:flex-1 md:min-w-0">
             <p className="text-sm font-semibold text-gray-600 mb-2 flex-shrink-0">
               그룹별 납입액 / 평가액 (최신 기준)
             </p>
@@ -329,9 +329,9 @@ export default function PensionChartsOverviewPage() {
         </div>
 
         {/* Row 2: 납입액 추이 + 수익률 추이 */}
-        <div className="flex gap-3 min-h-0" style={{ flex: 4 }}>
+        <div className="flex flex-col gap-3 md:flex-row md:min-h-0" style={{ flex: 4 }}>
 
-          <div className="flex-1 min-w-0 bg-white rounded-2xl border border-gray-100 shadow-sm p-4 flex flex-col">
+          <div className="h-[240px] bg-white rounded-2xl border border-gray-100 shadow-sm p-4 flex flex-col md:h-auto md:flex-1 md:min-w-0">
             <div className="flex items-center justify-between mb-2 flex-shrink-0">
               <p className="text-sm font-semibold text-gray-600">{mode === 'monthly' ? '월별' : '연도별'} 납입액 추이</p>
               <div className="flex items-center gap-3">
@@ -389,7 +389,7 @@ export default function PensionChartsOverviewPage() {
             </div>
           </div>
 
-          <div className="flex-1 min-w-0 bg-white rounded-2xl border border-gray-100 shadow-sm p-4 flex flex-col">
+          <div className="h-[240px] bg-white rounded-2xl border border-gray-100 shadow-sm p-4 flex flex-col md:h-auto md:flex-1 md:min-w-0">
             <div className="flex items-center justify-between mb-2 flex-shrink-0">
               <p className="text-sm font-semibold text-gray-600">{mode === 'monthly' ? '월별' : '연도별'} 수익률 추이</p>
               <div className="flex items-center gap-3">
@@ -428,8 +428,8 @@ export default function PensionChartsOverviewPage() {
         </div>
 
         {/* Row 3: 평가액 추이 + 비중 추이 */}
-        <div className="flex gap-3 min-h-0" style={{ flex: 4 }}>
-          <div className="flex-1 min-w-0 bg-white rounded-2xl border border-gray-100 shadow-sm p-4 flex flex-col">
+        <div className="flex flex-col gap-3 md:flex-row md:min-h-0" style={{ flex: 4 }}>
+          <div className="h-[240px] bg-white rounded-2xl border border-gray-100 shadow-sm p-4 flex flex-col md:h-auto md:flex-1 md:min-w-0">
             <div className="flex items-center justify-between mb-2 flex-shrink-0">
               <p className="text-sm font-semibold text-gray-600">{mode === 'monthly' ? '월별' : '연도별'} 평가액 추이</p>
               <div className="flex items-center gap-3">
@@ -481,7 +481,7 @@ export default function PensionChartsOverviewPage() {
                 )}
             </div>
           </div>
-          <div className="flex-1 min-w-0 bg-white rounded-2xl border border-gray-100 shadow-sm p-4 flex flex-col">
+          <div className="h-[240px] bg-white rounded-2xl border border-gray-100 shadow-sm p-4 flex flex-col md:h-auto md:flex-1 md:min-w-0">
             <div className="flex items-center justify-between mb-2 flex-shrink-0">
               <p className="text-sm font-semibold text-gray-600">{mode === 'monthly' ? '월별' : '연도별'} 그룹 비중 추이</p>
               <div className="flex items-center gap-3">

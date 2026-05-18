@@ -278,7 +278,8 @@ export default function PensionPage() {
               <p className="text-sm">"연금" 섹션이 없습니다</p>
             </div>
           ) : (
-            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-x-auto">
+              <div className="min-w-[700px]">
 
               <div className="grid text-xs font-semibold text-gray-400 uppercase tracking-wider pl-6 pr-2 py-3 bg-gray-50 border-b border-gray-100"
                 style={{ gridTemplateColumns: COLS }}>
@@ -334,6 +335,7 @@ export default function PensionPage() {
                 <span />
               </div>
 
+              </div>
             </div>
           )}
         </div>

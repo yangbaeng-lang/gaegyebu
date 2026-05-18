@@ -185,15 +185,15 @@ export default function OverviewPage() {
   const yProps = { tick: { fontSize: 10, fill: '#9ca3af' }, axisLine: false as const, tickLine: false as const, width: 48 }
 
   return (
-    <div className="flex-1 flex flex-col overflow-hidden bg-gray-50">
+    <div className="flex-1 flex flex-col overflow-y-auto md:overflow-hidden bg-gray-50">
 
       {/* 헤더 */}
-      <div className="px-8 pt-4 pb-2 flex-shrink-0">
+      <div className="px-4 md:px-8 pt-4 pb-2 flex-shrink-0">
         <h1 className="text-lg font-bold text-gray-800">전체 섹션 현황</h1>
       </div>
 
       {/* 섹션 토글 */}
-      <div className="px-8 pb-2 flex items-center gap-2 flex-wrap flex-shrink-0">
+      <div className="px-4 md:px-8 pb-2 flex items-center gap-2 flex-wrap flex-shrink-0">
         {allSessions.map(s => {
           const on = selected.has(s.id)
           return (
@@ -208,13 +208,13 @@ export default function OverviewPage() {
       </div>
 
       {/* 차트 영역 — 뷰포트 나머지 채우기 */}
-      <div className="flex-1 min-h-0 px-8 pb-4 flex flex-col gap-3">
+      <div className="px-4 pb-4 flex flex-col gap-3 md:flex-1 md:min-h-0 md:px-8">
 
         {/* Row 1: 요약 + 섹션 비교 */}
-        <div className="flex gap-3 min-h-0" style={{ flex: 3 }}>
+        <div className="flex flex-col gap-3 md:flex-row md:min-h-0" style={{ flex: 3 }}>
 
           {/* 합계 요약 */}
-          <div className="w-72 flex-shrink-0 bg-white rounded-2xl border border-gray-100 shadow-sm px-5 py-4 flex flex-col">
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm px-5 py-4 flex flex-col md:w-72 md:flex-shrink-0">
             <SummaryRow label="전체 자산"   value={totalAssets} color="text-[#4a6fdb]" bg="bg-[#4a6fdb]/8" icon="ti-wallet"      />
             <div className="border-t border-gray-100 my-2" />
             <SummaryRow label="전체 부채"   value={totalLiab}   color="text-[#d94f4f]" bg="bg-[#d94f4f]/8" icon="ti-credit-card" />
@@ -226,7 +226,7 @@ export default function OverviewPage() {
           </div>
 
           {/* 섹션별 비교 차트 */}
-          <div className="flex-1 min-w-0 bg-white rounded-2xl border border-gray-100 shadow-sm p-4 flex flex-col">
+          <div className="h-[240px] bg-white rounded-2xl border border-gray-100 shadow-sm p-4 flex flex-col md:h-auto md:flex-1 md:min-w-0">
             <p className="text-sm font-semibold text-gray-600 mb-2 flex-shrink-0">섹션별 자산 / 부채 / 순자산</p>
             <div className="flex-1 min-h-0">
               {filteredSummary.length === 0
@@ -255,10 +255,10 @@ export default function OverviewPage() {
         </div>
 
         {/* Row 2: 추이 2개 */}
-        <div className="flex gap-3 min-h-0" style={{ flex: 4 }}>
+        <div className="flex flex-col gap-3 md:flex-row md:min-h-0" style={{ flex: 4 }}>
 
           {/* 수입/지출/순수익 추이 */}
-          <div className="flex-1 min-w-0 bg-white rounded-2xl border border-gray-100 shadow-sm p-4 flex flex-col">
+          <div className="h-[240px] bg-white rounded-2xl border border-gray-100 shadow-sm p-4 flex flex-col md:h-auto md:flex-1 md:min-w-0">
             <div className="flex items-center justify-between mb-2 flex-shrink-0">
               <p className="text-sm font-semibold text-gray-600">{mode === 'monthly' ? '월별' : '연도별'} 수입 / 지출 / 순수익</p>
               <ModeToggle mode={mode} onChange={handleMode} />
@@ -311,7 +311,7 @@ export default function OverviewPage() {
           </div>
 
           {/* 자산/부채/순자산 추이 */}
-          <div className="flex-1 min-w-0 bg-white rounded-2xl border border-gray-100 shadow-sm p-4 flex flex-col">
+          <div className="h-[240px] bg-white rounded-2xl border border-gray-100 shadow-sm p-4 flex flex-col md:h-auto md:flex-1 md:min-w-0">
             <div className="flex items-center justify-between mb-2 flex-shrink-0">
               <p className="text-sm font-semibold text-gray-600">{mode === 'monthly' ? '월별' : '연도별'} 자산 / 부채 / 순자산</p>
               <ModeToggle mode={mode} onChange={handleMode} />
@@ -365,7 +365,7 @@ export default function OverviewPage() {
         </div>
 
         {/* Row 3: 누적 순이익 */}
-        <div className="min-h-0 bg-white rounded-2xl border border-gray-100 shadow-sm p-4 flex flex-col" style={{ flex: 3 }}>
+        <div className="h-[240px] bg-white rounded-2xl border border-gray-100 shadow-sm p-4 flex flex-col md:h-auto md:min-h-0" style={{ flex: 3 }}>
           <div className="flex items-center justify-between mb-2 flex-shrink-0">
             <p className="text-sm font-semibold text-gray-600">{mode === 'monthly' ? '월별' : '연도별'} 섹션별 누적 순이익</p>
             <ModeToggle mode={mode} onChange={handleMode} />
