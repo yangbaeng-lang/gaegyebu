@@ -126,8 +126,24 @@ export async function GET(req: NextRequest) {
       groups[grp] = { 납입액: 납, 평가액: 평, 평가손익: 손익, 수익률: 율, 비중 }
     }
 
-    return { yearMonth: ym, groups, total평가액 }
+    return { yearMonth: ym, groups, total평가액, assets: assetData }
   })
 
-  return NextResponse.json({ monthlyData, groupOrder })
+  // 자산별 최신 데이터 수집 → 수익률 내림차순 정렬
+  const assetLatest: Record<string, { color: string; 납입액: number; 평가손익: number | null; 수익률: number | null }> = {}
+  for (const entry of monthlyData) {
+    for (const a of entry.assets) {
+      assetLatest[a.name] = { color: a.color, 납입액: a.납입액, 평가손익: a.평가손익, 수익률: a.수익률 }
+    }
+  }
+  const assetOrder = Object.entries(assetLatest)
+    .sort(([, a], [, b]) => {
+      if (a.수익률 === null && b.수익률 === null) return 0
+      if (a.수익률 === null) return 1
+      if (b.수익률 === null) return -1
+      return b.수익률 - a.수익률
+    })
+    .map(([name, meta]) => ({ name, ...meta }))
+
+  return NextResponse.json({ monthlyData, groupOrder, assetOrder })
 }
