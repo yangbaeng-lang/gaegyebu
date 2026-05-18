@@ -214,7 +214,7 @@ export default function OverviewPage() {
         <div className="flex gap-3 min-h-0" style={{ flex: 3 }}>
 
           {/* 합계 요약 */}
-          <div className="w-44 flex-shrink-0 bg-white rounded-2xl border border-gray-100 shadow-sm px-4 py-4 flex flex-col">
+          <div className="w-72 flex-shrink-0 bg-white rounded-2xl border border-gray-100 shadow-sm px-5 py-4 flex flex-col">
             <SummaryRow label="전체 자산"   value={totalAssets} color="text-[#4a6fdb]" bg="bg-[#4a6fdb]/8" icon="ti-wallet"      />
             <div className="border-t border-gray-100 my-2" />
             <SummaryRow label="전체 부채"   value={totalLiab}   color="text-[#d94f4f]" bg="bg-[#d94f4f]/8" icon="ti-credit-card" />
@@ -439,14 +439,14 @@ function SummaryRow({ label, value, color, bg, icon }: {
   label: string; value: number; color: string; bg: string; icon: string
 }) {
   return (
-    <div className="flex-1 flex flex-col items-center justify-center gap-1.5">
-      <div className="flex items-center gap-1.5">
-        <span className={`w-5 h-5 flex items-center justify-center rounded-md flex-shrink-0 ${bg}`}>
-          <i className={`ti ${icon} text-[11px] ${color}`} />
+    <div className="flex-1 flex items-center justify-between gap-3">
+      <div className="flex items-center gap-2 flex-shrink-0">
+        <span className={`w-6 h-6 flex items-center justify-center rounded-md flex-shrink-0 ${bg}`}>
+          <i className={`ti ${icon} text-xs ${color}`} />
         </span>
-        <span className="text-xs text-gray-400">{label}</span>
+        <span className="text-sm text-gray-500">{label}</span>
       </div>
-      <p className={`text-[17px] font-bold ${color} tabular-nums`}>{fmtFull(value)}</p>
+      <p className={`text-base font-bold ${color} tabular-nums`}>{fmtFull(value)}</p>
     </div>
   )
 }

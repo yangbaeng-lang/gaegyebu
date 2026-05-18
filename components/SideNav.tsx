@@ -121,7 +121,7 @@ export default function SideNav() {
                   ) : (
                     <>
                       <i className={`ti ${s.id === currentSid ? 'ti-check text-[#6b8cff]' : 'ti-circle text-white/20'} text-[10px] flex-shrink-0`} />
-                      <span className={`flex-1 text-[14px] truncate font-semibold ${s.id === currentSid ? 'text-white' : 'text-white/70'}`}>{s.name}</span>
+                      <span className={`flex-1 min-w-0 text-base truncate font-semibold ${s.id === currentSid ? 'text-white' : 'text-white/70'}`}>{s.name}</span>
                       {confirmDelId === s.id ? (
                         <div className="flex items-center gap-1" onClick={e => e.stopPropagation()}>
                           <span className="text-[10px] text-red-400">삭제?</span>
@@ -131,7 +131,7 @@ export default function SideNav() {
                             className="text-[10px] px-1.5 py-0.5 rounded bg-white/10 text-white/60 hover:bg-white/20">아니오</button>
                         </div>
                       ) : (
-                        <div className="flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <div className="flex gap-0.5 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
                           <button
                             onClick={e => { e.stopPropagation(); startRename(s) }}
                             className="w-4 h-4 flex items-center justify-center rounded hover:bg-white/10 text-white/40 hover:text-white/80">

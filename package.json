@@ -13,10 +13,12 @@
   },
   "dependencies": {
     "@prisma/client": "^5.13.0",
+    "@tabler/icons-webfont": "^3.44.0",
     "@types/node": "^20",
     "@types/react": "^18",
     "@types/react-dom": "^18",
     "autoprefixer": "^10",
+    "better-sqlite3": "^12.10.0",
     "next": "14.2.0",
     "postcss": "^8",
     "prisma": "^5.13.0",
@@ -27,7 +29,6 @@
     "typescript": "^5",
     "xlsx": "^0.18.5"
   },
-  "devDependencies": {},
   "prisma": {
     "seed": "node prisma/seed.js"
   }

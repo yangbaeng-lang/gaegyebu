@@ -79,11 +79,11 @@ function ItemRow({ c, type, group, allGroups, editId, editName, editRef, dragId,
             <i className={`ti ${c.hidden ? 'ti-eye-off' : 'ti-eye'} text-xs`} />
           </button>
           <button onClick={() => onEditStart(c.id, c.name)}
-            className="w-6 h-6 flex items-center justify-center rounded text-gray-300 hover:text-blue-500 hover:bg-blue-50">
+            className="w-6 h-6 flex items-center justify-center rounded text-gray-500 hover:text-blue-500 hover:bg-blue-50">
             <i className="ti ti-pencil text-xs" />
           </button>
           <button onClick={() => onDelete(c.id, c.name, c.type)}
-            className="w-6 h-6 flex items-center justify-center rounded text-gray-300 hover:text-red-500 hover:bg-red-50">
+            className="w-6 h-6 flex items-center justify-center rounded text-gray-500 hover:text-red-500 hover:bg-red-50">
             <i className="ti ti-trash text-xs" />
           </button>
         </div>
@@ -313,7 +313,7 @@ export default function SettingsPage() {
     const allGroupNames = groups.map(g => g.group)
     const total = cats.filter(c => c.type === type && c.name !== '__group__' && c.id > 0 && (showHidden || !c.hidden)).length
 
-    const allCollapsed = groups.length > 0 && groups.every(g => collapsed[`${type}|${g.group}`] !== false)
+    const allCollapsed = groups.length > 0 && groups.every(g => !!collapsed[`${type}|${g.group}`])
     const toggleAll = () => {
       if (allCollapsed) {
         setCollapsed(p => { const n = { ...p }; groups.forEach(g => { n[`${type}|${g.group}`] = false }); return n })
@@ -342,15 +342,13 @@ export default function SettingsPage() {
         {groups.map(anchor => {
           const grp    = anchor.group
           const colKey = `${type}|${grp}`
-          const isOpen = collapsed[colKey] === false
+          const isOpen = !collapsed[colKey]
           const items  = getItems(type, grp)
           const isDraggingThis = dragGrp === grp
           const isDragOverThis = dragOverGrp === grp && dragGrp !== grp
 
           return (
             <div key={grp}
-              draggable={!dragId}
-              onDragStart={e => { e.stopPropagation(); setDragGrp(grp); setDragId(null); setDragItemGroup(null) }}
               onDragOver={e => {
                 e.preventDefault()
                 if (dragId && !dragGrp) setDragOverGrp(grp)           // 아이템을 그룹으로 드래그
@@ -362,16 +360,18 @@ export default function SettingsPage() {
                 if (dragId && !dragGrp) handleDropIntoGroup(type, grp) // 아이템 이동
                 else handleGroupDrop(type, grp)                         // 그룹 재정렬
               }}
-              onDragEnd={() => { setDragGrp(null); setDragOverGrp(null) }}
               className={`border rounded-xl overflow-hidden transition-colors
                 ${isDragOverThis ? 'border-blue-400 bg-blue-50/30'
                   : isDraggingThis ? 'border-gray-300 opacity-50'
                   : anchor.hidden ? 'border-gray-100 opacity-50'
                   : 'border-gray-100'}`}>
 
-              {/* 그룹 헤더 */}
+              {/* 그룹 헤더 - 드래그 핸들 */}
               <div className="flex items-center gap-2 px-3 py-2 bg-gray-50 cursor-grab select-none"
-                onClick={() => setCollapsed(p => ({ ...p, [colKey]: p[colKey] === false }))}>
+                draggable={!dragId}
+                onDragStart={e => { e.stopPropagation(); setDragGrp(grp); setDragId(null); setDragItemGroup(null) }}
+                onDragEnd={() => { setDragGrp(null); setDragOverGrp(null) }}
+                onClick={() => setCollapsed(p => ({ ...p, [colKey]: !p[colKey] }))}>
                 <i className="ti ti-grip-vertical text-gray-300 text-sm flex-shrink-0" />
                 <i className={`ti ${isOpen ? 'ti-chevron-down' : 'ti-chevron-right'} text-[10px] text-gray-400`} />
 
