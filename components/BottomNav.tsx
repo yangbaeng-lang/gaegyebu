@@ -32,19 +32,20 @@ export default function BottomNav() {
         <div className="md:hidden fixed inset-0 z-40" onClick={() => setMoreOpen(false)}>
           <div className="absolute inset-0 bg-black/50" />
           <div
-            className="absolute bottom-14 left-0 right-0 bg-[#1a1f2e] border-t border-white/10 px-4 py-3"
+            className="absolute bottom-14 left-0 right-0 bg-[#1a1f2e] rounded-t-2xl border-t border-white/10 px-6 pt-3 pb-4"
             onClick={e => e.stopPropagation()}
           >
-            <div className="grid grid-cols-5 gap-2">
+            <div className="w-10 h-1 bg-white/20 rounded-full mx-auto mb-4" />
+            <div className="grid grid-cols-3 gap-3">
               {MORE_NAV.map(n => {
                 const active = isActive(n.href)
                 return (
                   <Link key={n.href} href={n.href}
                     onClick={() => setMoreOpen(false)}
-                    className={`flex flex-col items-center gap-1 py-2 rounded-lg transition-colors
-                      ${active ? 'text-[#6b8cff]' : 'text-white/50'}`}>
-                    <i className={`ti ${n.icon} text-xl`} />
-                    <span className="text-[9px] leading-none text-center">{n.label}</span>
+                    className={`flex flex-col items-center gap-2 py-3 px-2 rounded-xl transition-colors
+                      ${active ? 'bg-[#6b8cff]/20 text-[#6b8cff]' : 'bg-white/[0.05] text-white/60'}`}>
+                    <i className={`ti ${n.icon} text-2xl`} />
+                    <span className="text-xs leading-none text-center">{n.label}</span>
                   </Link>
                 )
               })}
