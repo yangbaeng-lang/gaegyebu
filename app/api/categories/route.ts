@@ -156,6 +156,7 @@ export async function PUT(req: NextRequest) {
     }
     await prisma.transaction.updateMany({ where: { sessionId: sid, fromAcct: before.name }, data: { fromAcct: newName } })
     await prisma.transaction.updateMany({ where: { sessionId: sid, toAcct:   before.name }, data: { toAcct:   newName } })
+    await prisma.pensionEval.updateMany({ where: { sessionId: sid, assetName: before.name }, data: { assetName: newName } })
   }
 
   return NextResponse.json(cat)
