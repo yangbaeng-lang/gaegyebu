@@ -4,9 +4,9 @@ import { usePathname } from 'next/navigation'
 
 const TABS = [
   { href: '/pension-charts',             label: '그룹별 차트',  icon: 'ti-chart-bar'        },
+  { href: '/pension-charts/detail',      label: '세부내역 차트', icon: 'ti-chart-histogram'  },
   { href: '/pension-charts/overview',    label: '직접투자 연금', icon: 'ti-chart-area-line'  },
   { href: '/pension-charts/breakdown',   label: '세부내역 비율', icon: 'ti-chart-pie'        },
-  { href: '/pension-charts/detail',      label: '세부내역 차트', icon: 'ti-chart-histogram'  },
 ]
 
 export default function PensionChartsLayout({ children }: { children: React.ReactNode }) {
