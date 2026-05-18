@@ -3,7 +3,7 @@ import { useState, useEffect, useRef } from 'react'
 import { fmt } from '@/lib/utils'
 import {
   ComposedChart, Bar, Line, XAxis, YAxis, Cell,
-  Tooltip as RechartTooltip, ReferenceLine,
+  Tooltip as RechartTooltip, ReferenceLine, LabelList,
 } from 'recharts'
 
 type AssetMonthly = {
@@ -20,6 +20,16 @@ type AssetSummary = {
   name: string; color: string
   납입액: number; 평가손익: number | null; 수익률: number | null
 }
+
+function hexToRgba(hex: string, alpha: number) {
+  const r = parseInt(hex.slice(1, 3), 16)
+  const g = parseInt(hex.slice(3, 5), 16)
+  const b = parseInt(hex.slice(5, 7), 16)
+  return `rgba(${r},${g},${b},${alpha})`
+}
+
+const fmtLabel = (v: number) => (!v || v === 0) ? '' : (Math.abs(v) >= 10000 ? `${(v/10000).toFixed(1)}억` : `${v}만`)
+const LBL = { fontSize: 9, fill: '#9ca3af' } as const
 
 const TOOLTIP_STYLE = {
   background: '#ffffff',
@@ -251,11 +261,28 @@ export default function PensionDetailPage() {
                             }} />
                           <ReferenceLine yAxisId="left" y={0} stroke="#e5e7eb" />
 
-                          <Bar yAxisId="left" dataKey="납입액"   name="납입액"   stackId="a" fill="#c7d2fe" maxBarSize={28} />
-                          <Bar yAxisId="left" dataKey="평가손익" name="평가손익" stackId="a" maxBarSize={28}>
+                          {/* 납입액: 자산 고유 색상(연하게) */}
+                          <Bar yAxisId="left" dataKey="납입액" name="납입액" stackId="a"
+                            fill={hexToRgba(color.startsWith('#') ? color : '#4a6fdb', 0.25)}
+                            maxBarSize={36} />
+
+                          {/* 평가손익: 상단 누적, 양수=자산색, 음수=빨강 */}
+                          <Bar yAxisId="left" dataKey="평가손익" name="평가손익" stackId="a" maxBarSize={36}>
                             {chartData.map((entry, i) => (
-                              <Cell key={i} fill={(entry.평가손익 ?? 0) >= 0 ? '#86efac' : '#fca5a5'} />
+                              <Cell key={i}
+                                fill={(entry.평가손익 ?? 0) >= 0 ? color : '#f87171'}
+                                fillOpacity={(entry.평가손익 ?? 0) >= 0 ? 0.9 : 0.8}
+                              />
                             ))}
+                            {/* 바 상단에 총액(평가액) 라벨 */}
+                            <LabelList
+                              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                              valueAccessor={(row: any) => {
+                                const total = (Number(row.납입액) || 0) + (Number(row.평가손익) || 0)
+                                return total > 0 ? total : null
+                              }}
+                              position="top" formatter={fmtLabel} style={LBL}
+                            />
                           </Bar>
 
                           <Line yAxisId="right" type="monotone" dataKey="수익률" name="수익률"
@@ -270,13 +297,14 @@ export default function PensionDetailPage() {
                   {/* 범례 */}
                   <div className="flex items-center gap-4 justify-center pb-3 text-[10px] text-gray-400">
                     <span className="flex items-center gap-1.5">
-                      <span className="w-3 h-2.5 rounded-sm bg-[#c7d2fe] inline-block" />납입액
+                      <span className="w-3 h-2.5 rounded-sm inline-block"
+                        style={{ backgroundColor: hexToRgba(color.startsWith('#') ? color : '#4a6fdb', 0.25) }} />납입액
                     </span>
                     <span className="flex items-center gap-1.5">
-                      <span className="w-3 h-2.5 rounded-sm bg-[#86efac] inline-block" />평가손익(+)
+                      <span className="w-3 h-2.5 rounded-sm inline-block" style={{ backgroundColor: color }} />평가손익(+)
                     </span>
                     <span className="flex items-center gap-1.5">
-                      <span className="w-3 h-2.5 rounded-sm bg-[#fca5a5] inline-block" />평가손익(−)
+                      <span className="w-3 h-2.5 rounded-sm bg-[#f87171] inline-block" />평가손익(−)
                     </span>
                     <span className="flex items-center gap-1.5">
                       <span className="w-4 h-0.5 bg-[#8b5cf6] inline-block rounded" />수익률
