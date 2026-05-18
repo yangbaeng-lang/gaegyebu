@@ -1,9 +1,9 @@
 'use client'
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import { fmt } from '@/lib/utils'
 import {
   ComposedChart, Bar, Line, XAxis, YAxis, Cell,
-  Tooltip as RechartTooltip, ReferenceLine, LabelList,
+  Tooltip as RechartTooltip, ResponsiveContainer, ReferenceLine,
 } from 'recharts'
 
 type AssetMonthly = {
@@ -21,16 +21,6 @@ type AssetSummary = {
   납입액: number; 평가손익: number | null; 수익률: number | null
 }
 
-function hexToRgba(hex: string, alpha: number) {
-  const r = parseInt(hex.slice(1, 3), 16)
-  const g = parseInt(hex.slice(3, 5), 16)
-  const b = parseInt(hex.slice(5, 7), 16)
-  return `rgba(${r},${g},${b},${alpha})`
-}
-
-const fmtLabel = (v: number) => (!v || v === 0) ? '' : (Math.abs(v) >= 10000 ? `${(v/10000).toFixed(1)}억` : `${v}만`)
-const LBL = { fontSize: 9, fill: '#9ca3af' } as const
-
 const TOOLTIP_STYLE = {
   background: '#ffffff',
   border: '1px solid #e5e7eb',
@@ -40,76 +30,6 @@ const TOOLTIP_STYLE = {
   fontWeight: 'bold' as const,
   color: '#374151',
   boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
-}
-
-const VISIBLE = 10
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function ScrollChart({ data, children }: { data: any[]; children: (w: number, h: number) => React.ReactNode }) {
-  const wrapRef     = useRef<HTMLDivElement>(null)
-  const [dims, setDims] = useState({ w: 0, h: 0 })
-  const dragging    = useRef(false)
-  const startX      = useRef(0)
-  const scrollLeft  = useRef(0)
-  const scrolledRef = useRef(false)
-
-  useEffect(() => {
-    const el = wrapRef.current
-    if (!el) return
-    const ro = new ResizeObserver(() => setDims({ w: el.clientWidth, h: el.clientHeight }))
-    ro.observe(el)
-    setDims({ w: el.clientWidth, h: el.clientHeight })
-    return () => ro.disconnect()
-  }, [])
-
-  useEffect(() => { scrolledRef.current = false }, [data])
-
-  useEffect(() => {
-    if (dims.w === 0 || scrolledRef.current) return
-    scrolledRef.current = true
-    requestAnimationFrame(() => {
-      if (wrapRef.current) wrapRef.current.scrollLeft = wrapRef.current.scrollWidth
-    })
-  }, [dims.w, data])
-
-  const onDown = (e: React.MouseEvent) => {
-    dragging.current   = true
-    startX.current     = e.pageX - (wrapRef.current?.offsetLeft ?? 0)
-    scrollLeft.current = wrapRef.current?.scrollLeft ?? 0
-  }
-  const onMove = (e: React.MouseEvent) => {
-    if (!dragging.current || !wrapRef.current) return
-    e.preventDefault()
-    wrapRef.current.scrollLeft = scrollLeft.current - (e.pageX - (wrapRef.current.offsetLeft ?? 0) - startX.current)
-  }
-  const onUp = () => { dragging.current = false }
-
-  const barW   = dims.w > 0 ? Math.floor(dims.w / VISIBLE) : 60
-  const innerW = data.length > VISIBLE ? data.length * barW : dims.w
-
-  return (
-    <>
-      <style>{`
-        .pd-scroll::-webkit-scrollbar{height:6px}
-        .pd-scroll::-webkit-scrollbar-track{background:#f1f5f9;border-radius:3px}
-        .pd-scroll::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:3px;min-width:24px}
-        .pd-scroll::-webkit-scrollbar-thumb:hover{background:#94a3b8}
-      `}</style>
-      <div
-        ref={wrapRef}
-        className="pd-scroll overflow-x-auto h-full select-none"
-        style={{ cursor: dragging.current ? 'grabbing' : 'grab' }}
-        onMouseDown={onDown}
-        onMouseMove={onMove}
-        onMouseUp={onUp}
-        onMouseLeave={onUp}
-      >
-        <div style={{ width: innerW, height: '100%' }}>
-          {dims.w > 0 && dims.h > 0 && children(innerW, dims.h)}
-        </div>
-      </div>
-    </>
-  )
 }
 
 export default function PensionDetailPage() {
@@ -143,6 +63,7 @@ export default function PensionDetailPage() {
       .finally(() => setLoading(false))
   }, [pensionSid, selectedYear])
 
+  // 자산별 월별 차트 데이터 조합
   const assetCharts = assetOrder.map(summary => {
     const chartData = monthlyData
       .map(entry => {
@@ -236,75 +157,53 @@ export default function PensionDetailPage() {
                   </div>
                 </div>
 
-                {/* 드래그 스크롤 차트 */}
+                {/* 시계열 차트 */}
                 <div className="px-3 pt-3 pb-0">
-                  <div style={{ height: 210 }}>
-                    <ScrollChart data={chartData}>
-                      {(w, h) => (
-                        <ComposedChart data={chartData} width={w} height={h}
-                          margin={{ top: 10, right: 42, bottom: 5, left: 0 }}>
-                          <XAxis dataKey="month"
-                            tick={{ fontSize: 10, fill: '#9ca3af' }} axisLine={false} tickLine={false} interval={0} />
-                          <YAxis yAxisId="left"
-                            tick={{ fontSize: 9, fill: '#9ca3af' }}
-                            tickFormatter={v => v === 0 ? '0' : `${v}만`}
-                            axisLine={false} tickLine={false} width={46} />
-                          <YAxis yAxisId="right" orientation="right"
-                            tick={{ fontSize: 9, fill: '#a78bfa' }}
-                            tickFormatter={v => `${v}%`}
-                            axisLine={false} tickLine={false} width={38} />
-                          <RechartTooltip contentStyle={TOOLTIP_STYLE}
-                            formatter={(value: unknown, name: string) => {
-                              const v = Number(value)
-                              if (name === '수익률') return [`${v >= 0 ? '+' : ''}${v.toFixed(2)}%`, name]
-                              return [`${v}만원`, name]
-                            }} />
-                          <ReferenceLine yAxisId="left" y={0} stroke="#e5e7eb" />
+                  <ResponsiveContainer width="100%" height={210}>
+                    <ComposedChart data={chartData} margin={{ top: 10, right: 42, bottom: 5, left: 0 }}>
+                      <XAxis dataKey="month"
+                        tick={{ fontSize: 10, fill: '#9ca3af' }} axisLine={false} tickLine={false} />
+                      <YAxis yAxisId="left"
+                        tick={{ fontSize: 9, fill: '#9ca3af' }}
+                        tickFormatter={v => v === 0 ? '0' : `${v}만`}
+                        axisLine={false} tickLine={false} width={46} />
+                      <YAxis yAxisId="right" orientation="right"
+                        tick={{ fontSize: 9, fill: '#a78bfa' }}
+                        tickFormatter={v => `${v}%`}
+                        axisLine={false} tickLine={false} width={38} />
+                      <RechartTooltip contentStyle={TOOLTIP_STYLE}
+                        formatter={(value: unknown, name: string) => {
+                          const v = Number(value)
+                          if (name === '수익률') return [`${v >= 0 ? '+' : ''}${v.toFixed(2)}%`, name]
+                          return [`${v}만원`, name]
+                        }} />
+                      <ReferenceLine yAxisId="left" y={0} stroke="#e5e7eb" />
 
-                          {/* 납입액: 자산 고유 색상(연하게) */}
-                          <Bar yAxisId="left" dataKey="납입액" name="납입액" stackId="a"
-                            fill={hexToRgba(color.startsWith('#') ? color : '#4a6fdb', 0.25)}
-                            maxBarSize={36} />
+                      {/* 누적 막대: 납입액(하단) + 평가손익(상단) */}
+                      <Bar yAxisId="left" dataKey="납입액"   name="납입액"   stackId="a" fill="#c7d2fe" maxBarSize={28} />
+                      <Bar yAxisId="left" dataKey="평가손익" name="평가손익" stackId="a" maxBarSize={28}>
+                        {chartData.map((entry, i) => (
+                          <Cell key={i} fill={(entry.평가손익 ?? 0) >= 0 ? '#86efac' : '#fca5a5'} />
+                        ))}
+                      </Bar>
 
-                          {/* 평가손익: 상단 누적, 양수=자산색, 음수=빨강 */}
-                          <Bar yAxisId="left" dataKey="평가손익" name="평가손익" stackId="a" maxBarSize={36}>
-                            {chartData.map((entry, i) => (
-                              <Cell key={i}
-                                fill={(entry.평가손익 ?? 0) >= 0 ? color : '#f87171'}
-                                fillOpacity={(entry.평가손익 ?? 0) >= 0 ? 0.9 : 0.8}
-                              />
-                            ))}
-                            {/* 바 상단에 총액(평가액) 라벨 */}
-                            <LabelList
-                              // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                              valueAccessor={(row: any) => {
-                                const total = (Number(row.납입액) || 0) + (Number(row.평가손익) || 0)
-                                return total > 0 ? total : null
-                              }}
-                              position="top" formatter={fmtLabel} style={LBL}
-                            />
-                          </Bar>
-
-                          <Line yAxisId="right" type="monotone" dataKey="수익률" name="수익률"
-                            stroke="#8b5cf6" strokeWidth={2}
-                            dot={{ r: 3, fill: '#8b5cf6', strokeWidth: 0 }}
-                            activeDot={{ r: 5 }} connectNulls={false} />
-                        </ComposedChart>
-                      )}
-                    </ScrollChart>
-                  </div>
+                      <Line yAxisId="right" type="monotone" dataKey="수익률" name="수익률"
+                        stroke="#8b5cf6" strokeWidth={2}
+                        dot={{ r: 3, fill: '#8b5cf6', strokeWidth: 0 }}
+                        activeDot={{ r: 5 }} connectNulls={false} />
+                    </ComposedChart>
+                  </ResponsiveContainer>
 
                   {/* 범례 */}
                   <div className="flex items-center gap-4 justify-center pb-3 text-[10px] text-gray-400">
                     <span className="flex items-center gap-1.5">
-                      <span className="w-3 h-2.5 rounded-sm inline-block"
-                        style={{ backgroundColor: hexToRgba(color.startsWith('#') ? color : '#4a6fdb', 0.25) }} />납입액
+                      <span className="w-3 h-2.5 rounded-sm bg-[#c7d2fe] inline-block" />납입액
                     </span>
                     <span className="flex items-center gap-1.5">
-                      <span className="w-3 h-2.5 rounded-sm inline-block" style={{ backgroundColor: color }} />평가손익(+)
+                      <span className="w-3 h-2.5 rounded-sm bg-[#86efac] inline-block" />평가손익(+)
                     </span>
                     <span className="flex items-center gap-1.5">
-                      <span className="w-3 h-2.5 rounded-sm bg-[#f87171] inline-block" />평가손익(−)
+                      <span className="w-3 h-2.5 rounded-sm bg-[#fca5a5] inline-block" />평가손익(−)
                     </span>
                     <span className="flex items-center gap-1.5">
                       <span className="w-4 h-0.5 bg-[#8b5cf6] inline-block rounded" />수익률
