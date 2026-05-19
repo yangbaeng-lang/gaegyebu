@@ -14,7 +14,7 @@ export async function GET(req: NextRequest) {
   const sessions = await prisma.session.findMany({ orderBy: [{ sortOrder: 'asc' }, { id: 'asc' }] })
   const current  = getSid(req)
   return NextResponse.json({ sessions, current }, {
-    headers: { 'Cache-Control': 'private, max-age=30, stale-while-revalidate=60' },
+    headers: { 'Cache-Control': 'private, max-age=30, stale-while-revalidate=60', 'Vary': 'Cookie' },
   })
 }
 

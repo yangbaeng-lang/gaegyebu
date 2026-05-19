@@ -92,7 +92,7 @@ export async function GET(req: NextRequest) {
     ...grouped.account_liability.map(c => c.name),
   ]
   return NextResponse.json({ grouped, raw: cats, account }, {
-    headers: { 'Cache-Control': 'private, max-age=10, stale-while-revalidate=30' },
+    headers: { 'Cache-Control': 'private, max-age=10, stale-while-revalidate=30', 'Vary': 'Cookie' },
   })
 }
 

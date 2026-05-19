@@ -56,7 +56,7 @@ export async function GET(req: NextRequest) {
     assets, liabilities,
     summary: { totalAssets, totalLiab, netWorth: totalAssets - totalLiab },
   }, {
-    headers: { 'Cache-Control': 'private, max-age=5, stale-while-revalidate=15' },
+    headers: { 'Cache-Control': 'private, max-age=5, stale-while-revalidate=15', 'Vary': 'Cookie' },
   })
 }
 

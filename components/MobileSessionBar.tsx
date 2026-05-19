@@ -1,25 +1,26 @@
 'use client'
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
+import { useSession } from '@/lib/SessionContext'
 
 type SessionItem = { id: number; name: string }
 
 export default function MobileSessionBar() {
+  const { refreshKey, switchSession: contextSwitch } = useSession()
   const [sessions,   setSessions]   = useState<SessionItem[]>([])
   const [currentSid, setCurrentSid] = useState(1)
   const [open,       setOpen]       = useState(false)
 
   useEffect(() => {
-    fetch('/api/sessions').then(r => r.json()).then(d => {
+    fetch('/api/sessions', { cache: 'no-cache' }).then(r => r.json()).then(d => {
       setSessions(d.sessions ?? [])
       setCurrentSid(d.current ?? 1)
     })
-  }, [])
+  }, [refreshKey])
 
   const switchSession = async (id: number) => {
-    await fetch(`/api/sessions/${id}`, { method: 'POST' })
     setOpen(false)
-    window.location.reload()
+    await contextSwitch(id)
   }
 
   const current = sessions.find(s => s.id === currentSid)

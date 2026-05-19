@@ -8,6 +8,7 @@ import PeriodNav from '@/components/PeriodNav'
 import Link from 'next/link'
 import { usePeriod } from '@/lib/usePeriod'
 import { exportAnalytics } from '@/lib/exportExcel'
+import { useSession } from '@/lib/SessionContext'
 
 type Summary   = { income: number; expense: number; net: number; savingRate: number }
 type CatItem   = { name: string; amount: number }
@@ -25,6 +26,7 @@ const TYPE_LABEL: Record<string, string> = { expense: '지출', income: '수입'
 export default function AnalyticsPage() {
   const period    = usePeriod()
   const catPeriod = usePeriod()
+  const { refreshKey: sessionKey } = useSession()
   const [summary,          setSummary]          = useState<Summary>({ income: 0, expense: 0, net: 0, savingRate: 0 })
   const [categories,       setCategories]       = useState<CatItem[]>([])
   const [incomeCategories, setIncomeCategories] = useState<CatItem[]>([])
@@ -39,14 +41,14 @@ export default function AnalyticsPage() {
   const [editTx,           setEditTx]           = useState<Tx | null>(null)
   const [editForm,         setEditForm]         = useState<Tx | null>(null)
   const [toast,            setToast]            = useState('')
-  const [refreshKey,       setRefreshKey]       = useState(0)
+  const [txKey,            setTxKey]            = useState(0)
   const [selectedIds,      setSelectedIds]      = useState<Set<number>>(new Set())
   const mouseDownRef = useRef(false)
   const dragStartIdx = useRef(-1)
   const lastDragIdx  = useRef(-1)
 
   useEffect(() => {
-    fetch(`/api/analytics?from=${period.dateFrom}&to=${period.dateTo}&viewMode=${period.viewMode}`)
+    fetch(`/api/analytics?from=${period.dateFrom}&to=${period.dateTo}&viewMode=${period.viewMode}`, { cache: 'no-cache' })
       .then(r => r.json())
       .then(d => {
         setSummary(d.summary)
@@ -55,23 +57,23 @@ export default function AnalyticsPage() {
         setTrend(d.trend)
         setDowPattern(d.dowPattern)
       })
-  }, [period.dateFrom, period.dateTo, period.viewMode, refreshKey])
+  }, [period.dateFrom, period.dateTo, period.viewMode, txKey, sessionKey])
 
   useEffect(() => {
-    fetch('/api/categories').then(r => r.json()).then(json => setCats(json.raw ?? []))
-  }, [])
+    fetch('/api/categories', { cache: 'no-cache' }).then(r => r.json()).then(json => setCats(json.raw ?? []))
+  }, [sessionKey])
 
   useEffect(() => {
     if (selectedDow === null) return
     fetch(`/api/transactions?from=${period.dateFrom}&to=${period.dateTo}`)
       .then(r => r.json()).then(d => setAllTxs(d.data ?? []))
-  }, [selectedDow, period.dateFrom, period.dateTo, refreshKey])
+  }, [selectedDow, period.dateFrom, period.dateTo, txKey, sessionKey])
 
   useEffect(() => {
     if (!selectedCat) return
     fetch(`/api/transactions?from=${catPeriod.dateFrom}&to=${catPeriod.dateTo}`)
       .then(r => r.json()).then(d => setCatTxs(d.data ?? []))
-  }, [selectedCat, catPeriod.dateFrom, catPeriod.dateTo, refreshKey])
+  }, [selectedCat, catPeriod.dateFrom, catPeriod.dateTo, txKey, sessionKey])
 
   const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(''), 2000) }
   const openEdit  = (tx: Tx)      => { setEditTx(tx); setEditForm({ ...tx }) }
@@ -84,14 +86,14 @@ export default function AnalyticsPage() {
     })
     setEditTx(null)
     showToast('수정됐습니다 ✓')
-    setRefreshKey(k => k + 1)
+    setTxKey(k => k + 1)
   }
 
   const handleDelete = async (id: number, desc?: string) => {
     if (!confirm(`"${desc ?? '이 거래'}"를 삭제하시겠습니까?`)) return
     await fetch(`/api/transactions/${id}`, { method: 'DELETE' })
     showToast('삭제됐습니다')
-    setRefreshKey(k => k + 1)
+    setTxKey(k => k + 1)
   }
 
   const catsByType = (type: string) => cats

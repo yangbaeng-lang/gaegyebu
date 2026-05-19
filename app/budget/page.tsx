@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { usePeriod } from '@/lib/usePeriod'
 import { fmt, fmtK, CAT_META, STATUS_COLOR } from '@/lib/utils'
 import { exportBudget } from '@/lib/exportExcel'
+import { useSession } from '@/lib/SessionContext'
 
 type BudgetItem = {
   id: number; category: string; group?: string; amount: number; yearMonth: string
@@ -54,6 +55,7 @@ function BudgetRow({ b, isIncome, onEdit }: { b: BudgetItem; isIncome: boolean; 
 
 export default function BudgetPage() {
   const period = usePeriod()
+  const { refreshKey: sessionKey } = useSession()
 
   const [incomeBudgets,  setIncomeBudgets]  = useState<BudgetItem[]>([])
   const [expenseBudgets, setExpenseBudgets] = useState<BudgetItem[]>([])
@@ -86,7 +88,7 @@ export default function BudgetPage() {
     }
   }
 
-  useEffect(() => { fetchData() }, [period.dateFrom, period.dateTo])
+  useEffect(() => { fetchData() }, [period.dateFrom, period.dateTo, sessionKey])
 
   const openEdit = (b: BudgetItem, budgetType: 'income'|'expense') => {
     setEditTarget({ ...b, budgetType })

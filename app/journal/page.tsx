@@ -8,6 +8,7 @@ import PeriodNav from '@/components/PeriodNav'
 import Link from 'next/link'
 import { usePeriod } from '@/lib/usePeriod'
 import { exportTransactions } from '@/lib/exportExcel'
+import { useSession } from '@/lib/SessionContext'
 
 // ── 타입 ──────────────────────────────────────────────────────
 type Tx = { id: number; type: string; date: string; desc: string; fromAcct: string; toAcct: string; amount: number; memo: string }
@@ -84,6 +85,7 @@ export default function JournalPage() {
 
   const period       = usePeriod()
   const panelPeriod  = usePeriod()
+  const { refreshKey: sessionKey } = useSession()
   const [txs,        setTxs]        = useState<Tx[]>([])
   const [sessionId,  setSessionId]  = useState(1)
   const [panelTxs,   setPanelTxs]   = useState<Tx[]>([])
@@ -121,19 +123,19 @@ export default function JournalPage() {
     setPanelTxs(d.data ?? [])
   }, [])
 
-  useEffect(() => { fetchTxs() }, [period.dateFrom, period.dateTo, dateFrom, dateTo])
+  useEffect(() => { fetchTxs() }, [period.dateFrom, period.dateTo, dateFrom, dateTo, sessionKey])
   useEffect(() => { setMainSelectedIds(new Set()) }, [period.dateFrom, period.dateTo, dateFrom, dateTo, typeFilter, q])
   useEffect(() => {
-    fetch('/api/sessions').then(r => r.json()).then(d => setSessionId(d.current ?? 1))
-  }, [])
+    fetch('/api/sessions', { cache: 'no-cache' }).then(r => r.json()).then(d => setSessionId(d.current ?? 1))
+  }, [sessionKey])
 
   useEffect(() => {
     if (!panel) return
     fetchPanelTxs(panelPeriod.dateFrom, panelPeriod.dateTo)
-  }, [panel, panelPeriod.dateFrom, panelPeriod.dateTo])
+  }, [panel, panelPeriod.dateFrom, panelPeriod.dateTo, sessionKey])
 
   useEffect(() => {
-    fetch('/api/categories').then(r => r.json()).then(json => {
+    fetch('/api/categories', { cache: 'no-cache' }).then(r => r.json()).then(json => {
       const names = (arr: { name: string }[]) => arr?.map(c => c.name) ?? []
       setCats({
         account_asset:     names(json.grouped.account_asset),
@@ -143,7 +145,7 @@ export default function JournalPage() {
         networth:          names(json.grouped.networth),
       })
     })
-  }, [])
+  }, [sessionKey])
 
   const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(''), 2000) }
   const openEdit  = (tx: Tx)      => { setEditTx(tx); setEditForm({ ...tx }) }

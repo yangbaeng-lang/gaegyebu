@@ -6,6 +6,7 @@ import { usePeriod } from '@/lib/usePeriod'
 import AmountInput from '@/components/AmountInput'
 import GroupedSelect from '@/components/GroupedSelect'
 import { QuickTx, loadQuickTxs, saveQuickTxs as saveQTxs, restoreQuickTxDate } from '@/lib/quickTxUtils'
+import { useSession } from '@/lib/SessionContext'
 
 type Tx   = { id: number; type: string; date: string; desc: string; fromAcct: string; toAcct: string; amount: number; memo: string }
 type Cats = { account_asset: string[]; account_liability: string[]; expense: string[]; income: string[]; networth: string[] }
@@ -131,6 +132,7 @@ function AcctPane({ side, selected, sections, onSelect, showHidden, onToggleShow
 export default function InsertPage() {
   const today = new Date()
   const period = usePeriod()
+  const { refreshKey: sessionKey } = useSession()
   const [cats,       setCats]       = useState<Cats>({ account_asset: [], account_liability: [], expense: [], income: [], networth: [] })
   const [rawCats,    setRawCats]    = useState<Cat[]>([])
   const [showHidden, setShowHidden] = useState(false)
@@ -179,8 +181,8 @@ export default function InsertPage() {
     setTxs(json.data)
   }
 
-  useEffect(() => { fetchCats() }, [])
-  useEffect(() => { fetchTxs() }, [period.dateFrom, period.dateTo])
+  useEffect(() => { fetchCats() }, [sessionKey])
+  useEffect(() => { fetchTxs() }, [period.dateFrom, period.dateTo, sessionKey])
 
   // 빠른 입력 — 세션별 localStorage
   useEffect(() => {

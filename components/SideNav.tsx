@@ -2,6 +2,7 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useState, useEffect, useRef } from 'react'
+import { useSession } from '@/lib/SessionContext'
 
 const NAV = [
   { href: '/',          icon: 'ti-pencil',     label: '거래 입력' },
@@ -16,6 +17,7 @@ type SessionItem = { id: number; name: string }
 
 export default function SideNav() {
   const pathname = usePathname()
+  const { refreshKey, switchSession: contextSwitch } = useSession()
 
   const [sessions,    setSessions]    = useState<SessionItem[]>([])
   const [currentSid,  setCurrentSid]  = useState(1)
@@ -26,13 +28,13 @@ export default function SideNav() {
   const menuRef = useRef<HTMLDivElement>(null)
 
   const fetchSessions = () => {
-    fetch('/api/sessions').then(r => r.json()).then(d => {
+    fetch('/api/sessions', { cache: 'no-cache' }).then(r => r.json()).then(d => {
       setSessions(d.sessions ?? [])
       setCurrentSid(d.current ?? 1)
     })
   }
 
-  useEffect(() => { fetchSessions() }, [])
+  useEffect(() => { fetchSessions() }, [refreshKey])
 
   useEffect(() => {
     if (!menuOpen) return
@@ -46,10 +48,8 @@ export default function SideNav() {
   }, [menuOpen])
 
   const switchSession = async (id: number) => {
-    await fetch(`/api/sessions/${id}`, { method: 'POST' })
     setMenuOpen(false)
-    sessionStorage.setItem('sectionSwitch', '1')
-    window.location.reload()
+    await contextSwitch(id)
   }
 
   const deleteSession = async (id: number) => {

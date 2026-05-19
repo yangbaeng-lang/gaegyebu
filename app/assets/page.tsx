@@ -7,6 +7,7 @@ import AmountInput from '@/components/AmountInput'
 import PeriodNav from '@/components/PeriodNav'
 import { usePeriod } from '@/lib/usePeriod'
 import { exportAssets } from '@/lib/exportExcel'
+import { useSession } from '@/lib/SessionContext'
 
 type Asset = { id: number; name: string; type: string; kind: string; amount: number; color: string; icon: string }
 type Cat   = { id: number; type: string; name: string; group: string; sortOrder: number }
@@ -41,6 +42,7 @@ function AssetCard({ item, selected, onClick }: AssetCardProps) {
 export default function AssetsPage() {
   const period   = usePeriod()
   const txPeriod = usePeriod()
+  const { refreshKey: sessionKey } = useSession()
   const [assets,      setAssets]      = useState<Asset[]>([])
   const [liabilities, setLiabilities] = useState<Asset[]>([])
   const [summary,     setSummary]     = useState({ totalAssets: 0, totalLiab: 0, netWorth: 0 })
@@ -68,7 +70,7 @@ export default function AssetsPage() {
     setSummary(json.summary)
   }
 
-  useEffect(() => { fetchData() }, [period.dateTo])
+  useEffect(() => { fetchData() }, [period.dateTo, sessionKey])
 
   useEffect(() => {
     if (!selected) return
