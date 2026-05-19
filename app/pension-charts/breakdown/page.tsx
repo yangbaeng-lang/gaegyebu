@@ -76,7 +76,7 @@ export default function PensionBreakdownPage() {
   const evalItems = items.filter(i => i.hasEval && i.평가액 > 0)
 
   const groupData = groupOrder.map((grp, idx) => {
-    const grpItems = evalItems.filter(i => i.group === grp)
+    const grpItems = evalItems.filter(i => i.group === grp).sort((a, b) => b.평가액 - a.평가액)
     if (grpItems.length === 0) return null
     const 평가액 = grpItems.reduce((s, i) => s + i.평가액, 0)
     const 납입액 = grpItems.reduce((s, i) => s + i.납입액, 0)
@@ -90,6 +90,7 @@ export default function PensionBreakdownPage() {
       items: grpItems,
     }
   }).filter((g): g is NonNullable<typeof g> => g !== null)
+    .sort((a, b) => b.value - a.value)
 
   const total평가액 = groupData.reduce((s, g) => s + g.value, 0)
 
