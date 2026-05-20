@@ -231,8 +231,8 @@ export default function AssetsPage() {
                   onClick={() => setCollapsed(p => ({ ...p, [colKey]: !p[colKey] }))}
                   className="w-full flex items-center gap-1.5 px-2 py-1.5 bg-gray-50 hover:bg-gray-100 transition-colors text-left">
                   <i className={`ti ${isOpen ? 'ti-chevron-down' : 'ti-chevron-right'} text-[9px] text-gray-400`} />
-                  <span className="text-[11px] font-medium text-gray-600 flex-1">{grp}</span>
-                  <span className="text-[10px] text-gray-400 tabular-nums">{fmt(grpTotal)}</span>
+                  <span className="text-[11px] font-medium text-gray-600 flex-1 truncate min-w-0">{grp}</span>
+                  <span className="text-[10px] text-gray-400 tabular-nums flex-shrink-0">{fmt(grpTotal)}</span>
                 </button>
                 {isOpen && (
                   <div className="px-1 py-1 space-y-0.5">
@@ -320,7 +320,7 @@ export default function AssetsPage() {
             </div>
 
             {/* 자산 / 부채 2열 */}
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {renderSection(assets,      'account_asset',     '자산', '#059669', summary.totalAssets, 'ti-trending-up'  )}
               {renderSection(liabilities, 'account_liability', '부채', '#d94f4f', summary.totalLiab,   'ti-trending-down')}
             </div>

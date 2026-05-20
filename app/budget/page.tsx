@@ -28,14 +28,14 @@ function BudgetRow({ b, isIncome, onEdit }: { b: BudgetItem; isIncome: boolean; 
   return (
     <div onClick={onEdit}
       className="rounded-lg px-2 py-2 hover:bg-gray-50 cursor-pointer transition-colors">
-      <div className="flex items-center justify-between mb-1.5">
-        <div className="flex items-center gap-1.5">
+      <div className="flex items-center justify-between mb-1.5 gap-1 min-w-0">
+        <div className="flex items-center gap-1.5 min-w-0">
           <div className="w-5 h-5 rounded flex items-center justify-center flex-shrink-0" style={{ background: meta.bg }}>
             <i className={`ti ${meta.icon} text-[10px]`} style={{ color: meta.color }} />
           </div>
-          <span className="text-sm font-medium text-gray-800">{b.category}</span>
+          <span className="text-sm font-medium text-gray-800 truncate">{b.category}</span>
         </div>
-        <div className="text-right">
+        <div className="text-right flex-shrink-0">
           <span className="text-sm font-medium text-gray-800 tabular-nums">{fmt(b.spent)}</span>
           <span className="text-xs text-gray-400 ml-1">
             / {b.amount > 0 ? fmtK(b.amount) : '미설정'}
@@ -163,7 +163,7 @@ export default function BudgetPage() {
           </div>
 
           {/* 수입 / 지출 2열 */}
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
 
             {/* 수입 목표 */}
             <div className="bg-white border border-gray-100 rounded-xl p-3">
