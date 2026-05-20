@@ -365,29 +365,30 @@ export default function OverviewPage() {
         </div>
 
         {/* Row 3: 누적 순이익 */}
-        <div className="h-[240px] bg-white rounded-2xl border border-gray-100 shadow-sm p-4 flex flex-col md:h-auto md:min-h-0" style={{ flex: 3 }}>
-          <div className="flex items-center justify-between mb-2 flex-shrink-0">
-            <p className="text-sm font-semibold text-gray-600">{mode === 'monthly' ? '월별' : '연도별'} 섹션별 누적 순이익</p>
-            <ModeToggle mode={mode} onChange={handleMode} />
-          </div>
-          {/* 섹션 토글 */}
-          {cumulData.sessions.length > 0 && (
-            <div className="flex gap-1.5 mb-2 flex-wrap flex-shrink-0">
-              {cumulData.sessions.map((s, i) => {
-                const on = cumulVisible.has(s.id)
-                const bg = SECTION_COLORS[i % SECTION_COLORS.length]
-                return (
-                  <button key={s.id}
-                    onClick={() => setCumulVisible(prev => { const n = new Set(prev); n.has(s.id) ? n.delete(s.id) : n.add(s.id); return n })}
-                    style={on ? { background: bg, borderColor: bg, color: '#fff' } : {}}
-                    className={`px-2.5 py-1 rounded-md text-xs font-semibold border transition-colors ${on ? '' : 'bg-white border-gray-200 text-gray-400 hover:border-gray-300'}`}>
-                    {s.name}
-                  </button>
-                )
-              })}
+        <div className="md:min-h-0" style={{ flex: 3 }}>
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 flex flex-col md:h-full md:min-h-0">
+            <div className="flex items-center justify-between mb-2 flex-shrink-0">
+              <p className="text-sm font-semibold text-gray-600">{mode === 'monthly' ? '월별' : '연도별'} 섹션별 누적 순이익</p>
+              <ModeToggle mode={mode} onChange={handleMode} />
             </div>
-          )}
-          <div className="flex-1 min-h-0">
+            {/* 섹션 토글 */}
+            {cumulData.sessions.length > 0 && (
+              <div className="flex gap-1.5 mb-2 flex-wrap flex-shrink-0">
+                {cumulData.sessions.map((s, i) => {
+                  const on = cumulVisible.has(s.id)
+                  const bg = SECTION_COLORS[i % SECTION_COLORS.length]
+                  return (
+                    <button key={s.id}
+                      onClick={() => setCumulVisible(prev => { const n = new Set(prev); n.has(s.id) ? n.delete(s.id) : n.add(s.id); return n })}
+                      style={on ? { background: bg, borderColor: bg, color: '#fff' } : {}}
+                      className={`px-2.5 py-1 rounded-md text-xs font-semibold border transition-colors ${on ? '' : 'bg-white border-gray-200 text-gray-400 hover:border-gray-300'}`}>
+                      {s.name}
+                    </button>
+                  )
+                })}
+              </div>
+            )}
+            <div className="h-[200px] md:flex-1 md:min-h-0">
             {cumulLoading
               ? <div className="h-full flex items-center justify-center text-gray-300 text-sm">불러오는 중…</div>
               : cumulData.series.length === 0
@@ -427,6 +428,7 @@ export default function OverviewPage() {
                   </ScrollChart>
                   )
                 })()}
+            </div>
           </div>
         </div>
 
