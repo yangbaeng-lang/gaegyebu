@@ -254,13 +254,13 @@ export default function AnalyticsPage() {
                         className={`cursor-pointer rounded-lg px-2 py-1.5 transition-colors ${isSel ? 'bg-blue-50 ring-1 ring-blue-200' : 'hover:bg-gray-50'}`}
                         onClick={() => handleCatSelect(c.name, txType)}>
                         <div className="flex items-center justify-between mb-1">
-                          <div className="flex items-center gap-1.5">
-                            <div className="w-5 h-5 rounded flex items-center justify-center" style={{ background: meta.bg }}>
+                          <div className="flex items-center gap-1.5 min-w-0">
+                            <div className="w-5 h-5 rounded flex items-center justify-center flex-shrink-0" style={{ background: meta.bg }}>
                               <i className={`ti ${meta.icon} text-[10px]`} style={{ color: meta.color }} />
                             </div>
-                            <span className={`text-sm ${isSel ? 'text-blue-700 font-medium' : 'text-gray-700'}`}>{c.name}</span>
+                            <span className={`text-sm truncate ${isSel ? 'text-blue-700 font-medium' : 'text-gray-700'}`}>{c.name}</span>
                           </div>
-                          <div className="text-right">
+                          <div className="text-right flex-shrink-0 ml-1">
                             <span className="text-sm font-medium text-gray-800 tabular-nums">{fmt(c.amount)}</span>
                             <span className="text-xs text-gray-400 ml-1">{pct}%</span>
                           </div>
@@ -305,7 +305,7 @@ export default function AnalyticsPage() {
           <div className="max-w-[1080px] mx-auto space-y-4">
 
             {/* KPI */}
-            <div className="grid grid-cols-4 gap-2">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
               {[
                 { label: '총 수입', val: fmt(summary.income),      color: '#2a9d5c' },
                 { label: '총 지출', val: fmt(summary.expense),     color: '#d94f4f' },
@@ -352,7 +352,7 @@ export default function AnalyticsPage() {
             </div>
 
             {/* 카테고리별 지출 / 수입 2열 */}
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
 
               {/* 카테고리별 지출 */}
               <div className="bg-white border border-gray-100 rounded-xl p-4">
