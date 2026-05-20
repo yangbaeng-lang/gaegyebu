@@ -150,40 +150,42 @@ export default function PensionBreakdownPage() {
                 <i className="ti ti-chart-donut text-[#6b8cff]" />
                 전체 그룹별 평가액 비율
               </div>
-              <div className="flex items-center gap-8">
-                <PieChart width={240} height={240} style={{ flexShrink: 0 }}>
-                  <Pie
-                    data={groupData}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={72}
-                    outerRadius={108}
-                    dataKey="value"
-                    nameKey="name"
-                    paddingAngle={2}
-                  >
-                    {groupData.map((g, i) => (
-                      <Cell key={i} fill={g.color} />
-                    ))}
-                  </Pie>
-                  <RechartTooltip
-                    contentStyle={TOOLTIP_STYLE}
-                    formatter={(value: unknown, name: string) => [fmt(Number(value)), name]}
-                  />
-                </PieChart>
+              <div className="flex flex-col md:flex-row items-center gap-4 md:gap-8">
+                <div className="flex-shrink-0">
+                  <PieChart width={220} height={220}>
+                    <Pie
+                      data={groupData}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={66}
+                      outerRadius={100}
+                      dataKey="value"
+                      nameKey="name"
+                      paddingAngle={2}
+                    >
+                      {groupData.map((g, i) => (
+                        <Cell key={i} fill={g.color} />
+                      ))}
+                    </Pie>
+                    <RechartTooltip
+                      contentStyle={TOOLTIP_STYLE}
+                      formatter={(value: unknown, name: string) => [fmt(Number(value)), name]}
+                    />
+                  </PieChart>
+                </div>
 
                 {/* 범례 */}
-                <div className="flex-1 space-y-2.5">
+                <div className="w-full space-y-2.5 min-w-0">
                   {groupData.map(g => {
                     const pct = total평가액 > 0 ? (g.value / total평가액) * 100 : 0
                     return (
-                      <div key={g.name} className="flex items-center gap-3">
+                      <div key={g.name} className="flex items-center gap-2 min-w-0">
                         <span className="w-3 h-3 rounded-sm flex-shrink-0" style={{ backgroundColor: g.color }} />
-                        <span className="text-sm text-gray-700 flex-1">{g.name}</span>
-                        <span className="text-sm font-bold text-gray-700 w-14 text-right">{pct.toFixed(1)}%</span>
-                        <span className="text-xs text-gray-400 w-28 text-right">{fmt(g.value)}</span>
+                        <span className="text-sm text-gray-700 flex-1 min-w-0 truncate">{g.name}</span>
+                        <span className="text-sm font-bold text-gray-700 w-14 text-right flex-shrink-0">{pct.toFixed(1)}%</span>
+                        <span className="text-xs text-gray-400 w-24 text-right flex-shrink-0">{fmt(g.value)}</span>
                         {g.수익률 !== null && (
-                          <span className={`text-xs font-bold px-2 py-0.5 rounded-md w-16 text-center ${rateBadge(g.수익률)}`}>
+                          <span className={`text-xs font-bold px-2 py-0.5 rounded-md w-16 text-center flex-shrink-0 ${rateBadge(g.수익률)}`}>
                             {g.수익률 >= 0 ? '+' : ''}{g.수익률.toFixed(2)}%
                           </span>
                         )}
@@ -199,7 +201,7 @@ export default function PensionBreakdownPage() {
             </div>
 
             {/* 그룹별 세부내역 파이 차트 */}
-            <div className="grid grid-cols-2 gap-5">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
               {groupData.map(g => {
                 const grpTotal = g.value
                 return (
