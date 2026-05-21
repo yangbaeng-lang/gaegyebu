@@ -325,21 +325,21 @@ export default function PerformancePage() {
           const totalPension = summaryBH.pension + summaryAR.pension
           return (
             <div className="bg-[#252b3b] rounded-2xl p-4">
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-x-4 gap-y-4">
                 {[
-                  { name: '병훈', s: summaryBH },
-                  { name: '아름', s: summaryAR },
-                  { name: '합계',  s: { finalAmount: totalFinal, pension: totalPension }, isTotal: true },
+                  { name: '병훈', s: summaryBH, isTotal: false },
+                  { name: '아름', s: summaryAR, isTotal: false },
+                  { name: '합계', s: { finalAmount: totalFinal, pension: totalPension }, isTotal: true },
                 ].map(({ name, s, isTotal }) => (
-                  <div key={name} className={`flex flex-col gap-2 ${isTotal ? 'border-l border-white/10 pl-4' : ''}`}>
+                  <div key={name} className={`flex flex-col gap-2 ${isTotal ? 'col-span-2 md:col-span-1 border-t md:border-t-0 md:border-l border-white/10 pt-3 md:pt-0 md:pl-4' : ''}`}>
                     <p className={`text-xs font-semibold ${isTotal ? 'text-[#6b8cff]' : 'text-white/40'}`}>{name}</p>
                     <div>
                       <p className="text-white/50 text-xs mb-0.5">최종 수령액 (세후)</p>
-                      <p className={`font-bold text-lg ${isTotal ? 'text-[#6b8cff]' : 'text-white'}`}>{fmt(s.finalAmount)}원</p>
+                      <p className={`font-bold text-base md:text-lg whitespace-nowrap ${isTotal ? 'text-[#6b8cff]' : 'text-white'}`}>{fmt(s.finalAmount)}원</p>
                     </div>
                     <div>
                       <p className="text-white/50 text-xs mb-0.5">퇴직연금 적립</p>
-                      <p className="text-white/70 font-semibold text-sm">{fmt(s.pension)}원</p>
+                      <p className="text-white/70 font-semibold text-sm whitespace-nowrap">{fmt(s.pension)}원</p>
                     </div>
                   </div>
                 ))}
