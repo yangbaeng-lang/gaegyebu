@@ -1,11 +1,13 @@
 'use client'
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
+import { useSession } from '@/lib/SessionContext'
 
 type SectionSummary = {
   id: number
   name: string
   createdAt: string
+  decimalPlaces: number
   totalAssets: number
   totalLiab: number
   netWorth: number
@@ -15,6 +17,7 @@ const fmt = (n: number) =>
   (n < 0 ? '-' : '') + Math.abs(n).toLocaleString() + '원'
 
 export default function SectionsPage() {
+  const { refreshDecimalPlaces } = useSession()
   const [sections,    setSections]    = useState<SectionSummary[]>([])
   const [loading,     setLoading]     = useState(true)
   const [currentSid,  setCurrentSid]  = useState(1)
@@ -31,6 +34,11 @@ export default function SectionsPage() {
   const [inFileDuplicateModal, setInFileDuplicateModal] = useState<{ count: number } | null>(null)
   const [pendingDuplicatesCount, setPendingDuplicatesCount] = useState(0)
   const [pendingSkipInFileDuplicates, setPendingSkipInFileDuplicates] = useState(true)
+  const [sectionSelectModal, setSectionSelectModal] = useState(false)
+  const [pendingRawFiles, setPendingRawFiles] = useState<File[] | null>(null)
+  const [importTargetSid, setImportTargetSid] = useState<number | null>(null)
+  const [selectedImportSid, setSelectedImportSid] = useState<number | null>(null)
+  const [settingsModal, setSettingsModal] = useState<{ id: number; name: string; decimalPlaces: number } | null>(null)
 
   const fetchData = () =>
     Promise.all([
@@ -72,12 +80,12 @@ export default function SectionsPage() {
     window.location.href = '/'
   }
 
-  const runImport = async (files: File[], skipDuplicates: boolean, skipInFileDuplicates: boolean = true) => {
+  const runImport = async (files: File[], skipDuplicates: boolean, skipInFileDuplicates: boolean = true, targetSid: number) => {
     setImporting(true); setImportResult(null)
     const fd = new FormData()
     files.forEach(f => fd.append('files', f))
     try {
-      const res  = await fetch(`/api/import-excel?skipDuplicates=${skipDuplicates}&skipInFileDuplicates=${skipInFileDuplicates}`, { method: 'POST', body: fd })
+      const res  = await fetch(`/api/import-excel?skipDuplicates=${skipDuplicates}&skipInFileDuplicates=${skipInFileDuplicates}&sid=${targetSid}`, { method: 'POST', body: fd })
       const data = await res.json()
       if (res.ok) {
         setImportResult({ imported: data.imported ?? 0, skipped: data.skipped ?? 0, duplicates: data.duplicates })
@@ -92,16 +100,12 @@ export default function SectionsPage() {
     }
   }
 
-  const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files
-    if (!files || files.length === 0) return
-    const fileList = Array.from(files)
-    e.target.value = ''
+  const startDryRun = async (files: File[], targetSid: number) => {
     setImporting(true); setImportResult(null)
     const fd = new FormData()
-    fileList.forEach(f => fd.append('files', f))
+    files.forEach(f => fd.append('files', f))
     try {
-      const res  = await fetch('/api/import-excel?dryRun=true', { method: 'POST', body: fd })
+      const res  = await fetch(`/api/import-excel?dryRun=true&sid=${targetSid}`, { method: 'POST', body: fd })
       const data = await res.json()
       if (!res.ok) {
         setImportResult({ imported: 0, skipped: 0, error: data.error ?? '가져오기에 실패했습니다' })
@@ -109,21 +113,39 @@ export default function SectionsPage() {
         return
       }
       if ((data.inFileDuplicates ?? 0) > 0) {
-        setPendingFiles(fileList)
+        setPendingFiles(files)
         setPendingDuplicatesCount(data.duplicates ?? 0)
         setInFileDuplicateModal({ count: data.inFileDuplicates })
         setImporting(false)
       } else if ((data.duplicates ?? 0) > 0) {
-        setPendingFiles(fileList)
+        setPendingFiles(files)
         setDuplicateModal({ count: data.duplicates })
         setImporting(false)
       } else {
-        await runImport(fileList, true)
+        await runImport(files, true, true, targetSid)
       }
     } catch (e) {
       setImportResult({ imported: 0, skipped: 0, error: `오류: ${e}` })
       setImporting(false)
     }
+  }
+
+  const handleImport = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files
+    if (!files || files.length === 0) return
+    const fileList = Array.from(files)
+    e.target.value = ''
+    setPendingRawFiles(fileList)
+    setSelectedImportSid(currentSid)
+    setSectionSelectModal(true)
+  }
+
+  const handleSectionSelected = async (targetSid: number) => {
+    setSectionSelectModal(false)
+    setImportTargetSid(targetSid)
+    const files = pendingRawFiles
+    setPendingRawFiles(null)
+    if (files) await startDryRun(files, targetSid)
   }
 
   const handleInFileDuplicateChoice = async (skipInFileDuplicates: boolean) => {
@@ -134,7 +156,7 @@ export default function SectionsPage() {
     } else {
       const files = pendingFiles
       setPendingFiles(null)
-      if (files) await runImport(files, true, skipInFileDuplicates)
+      if (files && importTargetSid !== null) await runImport(files, true, skipInFileDuplicates, importTargetSid)
     }
   }
 
@@ -142,8 +164,8 @@ export default function SectionsPage() {
     const files = pendingFiles
     setDuplicateModal(null)
     setPendingFiles(null)
-    if (!files) return
-    await runImport(files, skipDuplicates, pendingSkipInFileDuplicates)
+    if (!files || importTargetSid === null) return
+    await runImport(files, skipDuplicates, pendingSkipInFileDuplicates, importTargetSid)
   }
 
   const createSection = async () => {
@@ -167,6 +189,18 @@ export default function SectionsPage() {
     } finally {
       setCreating(false)
     }
+  }
+
+  const saveSettings = async () => {
+    if (!settingsModal) return
+    await fetch(`/api/sessions/${settingsModal.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ decimalPlaces: settingsModal.decimalPlaces }),
+    })
+    setSettingsModal(null)
+    fetchData()
+    if (settingsModal.id === currentSid) refreshDecimalPlaces()
   }
 
   const totalAssets = sections.reduce((s, r) => s + r.totalAssets, 0)
@@ -275,8 +309,13 @@ export default function SectionsPage() {
                     <div className="flex items-center justify-end">
                       <p className={`text-[15px] font-medium tabular-nums ${s.totalLiab > 0 ? 'text-[#d94f4f]' : 'text-gray-400'}`}>{fmt(s.totalLiab)}</p>
                     </div>
-                    <div className="flex items-center justify-end">
+                    <div className="flex items-center justify-end gap-2">
                       <p className={`text-[15px] font-semibold tabular-nums ${s.netWorth >= 0 ? 'text-[#2a9d5c]' : 'text-[#d94f4f]'}`}>{fmt(s.netWorth)}</p>
+                      <button
+                        onClick={e => { e.stopPropagation(); setSettingsModal({ id: s.id, name: s.name, decimalPlaces: s.decimalPlaces ?? 0 }) }}
+                        className="p-1 rounded-md hover:bg-gray-200 text-gray-300 hover:text-gray-500 flex-shrink-0 transition-colors">
+                        <i className="ti ti-settings text-xs" />
+                      </button>
                     </div>
                   </div>
                 ))}
@@ -297,6 +336,93 @@ export default function SectionsPage() {
           섹션 만들기
         </button>
       </div>
+
+      {/* 섹션 설정 모달 */}
+      {settingsModal && (
+        <div className="fixed inset-0 bg-black/30 z-50 flex items-center justify-center"
+          onClick={() => setSettingsModal(null)}>
+          <div className="bg-white rounded-2xl p-5 w-72 shadow-xl" onClick={e => e.stopPropagation()}>
+            <h3 className="text-[15px] font-semibold text-gray-800 mb-4">섹션 설정 — {settingsModal.name}</h3>
+            <div className="space-y-3">
+              <div>
+                <p className="text-[12px] font-medium text-gray-500 mb-2">소수점 자리수</p>
+                <div className="flex gap-2">
+                  {[0, 1, 2, 3].map(n => (
+                    <button
+                      key={n}
+                      onClick={() => setSettingsModal(prev => prev ? { ...prev, decimalPlaces: n } : prev)}
+                      className={`flex-1 py-2 text-[13px] font-semibold rounded-lg transition-colors
+                        ${settingsModal.decimalPlaces === n
+                          ? 'bg-[#1a1f2e] text-white'
+                          : 'border border-gray-200 text-gray-500 hover:bg-gray-50'}`}>
+                      {n}자리
+                    </button>
+                  ))}
+                </div>
+                <p className="text-[11px] text-gray-400 mt-2">
+                  예: {(1234.5678).toFixed(settingsModal.decimalPlaces).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}원
+                </p>
+              </div>
+              <div className="flex gap-2 pt-1">
+                <button onClick={() => setSettingsModal(null)}
+                  className="flex-1 py-2 text-[13px] font-semibold border border-gray-200 rounded-lg text-gray-500 hover:bg-gray-50">
+                  취소
+                </button>
+                <button onClick={saveSettings}
+                  className="flex-1 py-2 text-[13px] font-semibold bg-[#1a1f2e] text-white rounded-lg hover:opacity-90">
+                  저장
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 섹션 선택 모달 */}
+      {sectionSelectModal && (
+        <div className="fixed inset-0 bg-black/30 z-50 flex items-center justify-center">
+          <div className="bg-white rounded-2xl p-5 w-80 shadow-xl">
+            <div className="flex items-center gap-2 mb-3">
+              <i className="ti ti-database-import text-[#6b8cff] text-lg" />
+              <h3 className="text-[15px] font-semibold text-gray-800">가져올 섹션 선택</h3>
+            </div>
+            <p className="text-[13px] text-gray-500 mb-4">데이터를 가져올 섹션을 선택한 후 확인하세요.</p>
+            <div className="flex flex-col gap-2 max-h-60 overflow-y-auto">
+              {sections.map(s => (
+                <button
+                  key={s.id}
+                  onClick={() => setSelectedImportSid(s.id)}
+                  className={`w-full text-left px-3 py-2.5 rounded-lg text-[13px] font-semibold transition-colors flex items-center gap-2
+                    ${s.id === selectedImportSid
+                      ? 'bg-[#1a1f2e] text-white border border-[#1a1f2e]'
+                      : s.id === currentSid
+                        ? 'bg-[#6b8cff]/10 text-[#6b8cff] border border-[#6b8cff]/30 hover:bg-[#6b8cff]/20'
+                        : 'border border-gray-200 text-gray-700 hover:bg-gray-50'}`}>
+                  {s.id === selectedImportSid
+                    ? <i className="ti ti-check text-xs flex-shrink-0" />
+                    : s.id === currentSid
+                      ? <span className="w-1.5 h-1.5 rounded-full bg-[#6b8cff] flex-shrink-0" />
+                      : <span className="w-1.5 h-1.5 flex-shrink-0" />}
+                  {s.name}
+                </button>
+              ))}
+            </div>
+            <div className="flex gap-2 mt-3">
+              <button
+                onClick={() => { setSectionSelectModal(false); setPendingRawFiles(null); setSelectedImportSid(null) }}
+                className="flex-1 py-2 text-[13px] font-semibold border border-gray-200 text-gray-500 rounded-lg hover:bg-gray-50 transition-colors">
+                취소
+              </button>
+              <button
+                onClick={() => { if (selectedImportSid !== null) handleSectionSelected(selectedImportSid) }}
+                disabled={selectedImportSid === null}
+                className="flex-1 py-2 text-[13px] font-semibold bg-[#1a1f2e] text-white rounded-lg hover:opacity-90 disabled:opacity-40 transition-opacity">
+                이 섹션에 가져오기
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* 파일 내 중복 확인 모달 */}
       {inFileDuplicateModal && (

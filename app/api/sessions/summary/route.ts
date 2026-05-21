@@ -35,12 +35,13 @@ export async function GET() {
       const totalLiab   = assets.filter(a => a.kind === 'liability') .reduce((sum, a) => sum + Math.abs(amounts[a.type] ?? 0), 0)
 
       return {
-        id:        s.id,
-        name:      s.name,
-        createdAt: s.createdAt,
+        id:            s.id,
+        name:          s.name,
+        createdAt:     s.createdAt,
+        decimalPlaces: s.decimalPlaces,
         totalAssets,
         totalLiab,
-        netWorth:  totalAssets - totalLiab,
+        netWorth:      totalAssets - totalLiab,
       }
     })
   )

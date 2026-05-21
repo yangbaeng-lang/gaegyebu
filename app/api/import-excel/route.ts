@@ -59,7 +59,7 @@ function parseHuingRow(row: unknown[]): {
   if (!toAcct && !fromAcct) return null
 
   return {
-    date, desc, amount: Math.round(amount),
+    date, desc, amount,
     fromAcct, fromPrefix,
     toAcct, toPrefix,
     memo,
@@ -74,11 +74,17 @@ function inferType(fromPrefix: string, toPrefix: string): string {
 
 export async function POST(req: NextRequest) {
   try {
-    const sid = getSid(req)
     const url = new URL(req.url)
+    const urlSid = url.searchParams.get('sid')
+    const sid = urlSid ? parseInt(urlSid, 10) : getSid(req)
     const dryRun = url.searchParams.get('dryRun') === 'true'
     const skipDuplicates = url.searchParams.get('skipDuplicates') !== 'false'
     const skipInFileDuplicates = url.searchParams.get('skipInFileDuplicates') !== 'false'
+
+    const session = await prisma.session.findUnique({ where: { id: sid }, select: { decimalPlaces: true } })
+    const decimalPlaces = session?.decimalPlaces ?? 0
+    const roundAmount = (n: number) =>
+      decimalPlaces === 0 ? Math.round(n) : parseFloat(n.toFixed(decimalPlaces))
 
     const formData = await req.formData()
     const files = formData.getAll('files') as File[]
@@ -157,6 +163,7 @@ export async function POST(req: NextRequest) {
         try {
           const parsed = parseHuingRow(rows[i])
           if (!parsed) { skipped++; continue }
+          parsed.amount = roundAmount(parsed.amount)
 
           const key = `${parsed.date}|${parsed.desc}|${parsed.amount}|${parsed.fromAcct}|${parsed.toAcct}`
           if (importedSet.has(key)) {

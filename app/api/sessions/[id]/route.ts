@@ -10,11 +10,14 @@ export async function POST(_: NextRequest, { params }: { params: { id: string } 
   return res
 }
 
-// PATCH /api/sessions/[id] — 세션 이름 변경
+// PATCH /api/sessions/[id] — 세션 이름/설정 변경
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
   const id   = Number(params.id)
-  const { name } = await req.json()
-  const session = await prisma.session.update({ where: { id }, data: { name } })
+  const body = await req.json()
+  const data: Record<string, unknown> = {}
+  if (body.name          !== undefined) data.name          = body.name
+  if (body.decimalPlaces !== undefined) data.decimalPlaces = Number(body.decimalPlaces)
+  const session = await prisma.session.update({ where: { id }, data })
   return NextResponse.json(session)
 }
 
