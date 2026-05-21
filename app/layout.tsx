@@ -19,7 +19,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <SideNav />
           <div className="flex-1 flex flex-col overflow-hidden">
             <MobileSessionBar />
-            <main className="flex-1 flex flex-col overflow-hidden">
+            <main className="flex-1 flex flex-col overflow-y-auto bg-gray-50">
               {children}
             </main>
             <BottomNav />

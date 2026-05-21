@@ -16,6 +16,7 @@ const MORE_NAV = [
   { href: '/pension',        icon: 'ti-pig-money',       label: '연금 결산' },
   { href: '/pension-charts', icon: 'ti-chart-bar',       label: '연금 차트' },
   { href: '/overview',       icon: 'ti-chart-area-line', label: '전체 현황' },
+  { href: '/performance',     icon: 'ti-award',           label: '성과급'   },
   { href: '/settings',       icon: 'ti-settings',        label: '설정'     },
 ]
 

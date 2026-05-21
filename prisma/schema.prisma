@@ -79,3 +79,20 @@ model PensionEval {
 
   @@unique([sessionId, assetName, yearMonth])
 }
+
+model PerformanceConfig {
+  id          Int   @id @default(1)
+  sessionIdBH Int   @default(0)
+  sessionIdAR Int   @default(0)
+}
+
+model PerformanceSetting {
+  id                 Int    @id @default(autoincrement())
+  year               Int    @unique
+  operatingProfit    Float  @default(0)
+  baseAmountOverride Float?
+  taxRateBH          Float  @default(0)
+  taxRateAR          Float  @default(0)
+  combinedTaxRateBH  Float  @default(0)
+  combinedTaxRateAR  Float  @default(0)
+}
