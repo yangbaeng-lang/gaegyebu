@@ -313,23 +313,24 @@ export default function PerformancePage() {
             const c = calcPerson(salary?.BH ?? EMPTY_SALARY, payoutRate, overrideBH)
             const preTax = c.totalPayout + (reserve?.BH?.total ?? 0)
             const finalAmount = preTax - preTax * (Number(taxBH) / 100)
-            return { finalAmount, pension: c.pension }
+            return { finalAmount, pension: c.pension, reserve: c.reserve }
           })()
           const summaryAR = (() => {
             const c = calcPerson(salary?.AR ?? EMPTY_SALARY, payoutRate, overrideAR)
             const preTax = c.totalPayout + (reserve?.AR?.total ?? 0)
             const finalAmount = preTax - preTax * (Number(taxAR) / 100)
-            return { finalAmount, pension: c.pension }
+            return { finalAmount, pension: c.pension, reserve: c.reserve }
           })()
-          const totalFinal = summaryBH.finalAmount + summaryAR.finalAmount
-          const totalPension = summaryBH.pension + summaryAR.pension
+          const totalFinal   = summaryBH.finalAmount + summaryAR.finalAmount
+          const totalPension = summaryBH.pension     + summaryAR.pension
+          const totalReserve = summaryBH.reserve     + summaryAR.reserve
           return (
             <div className="bg-[#252b3b] rounded-2xl p-4">
               <div className="grid grid-cols-2 md:grid-cols-3 gap-x-4 gap-y-4">
                 {[
                   { name: '병훈', s: summaryBH, isTotal: false },
                   { name: '아름', s: summaryAR, isTotal: false },
-                  { name: '합계', s: { finalAmount: totalFinal, pension: totalPension }, isTotal: true },
+                  { name: '합계', s: { finalAmount: totalFinal, pension: totalPension, reserve: totalReserve }, isTotal: true },
                 ].map(({ name, s, isTotal }) => (
                   <div key={name} className={`flex flex-col gap-2 ${isTotal ? 'col-span-2 md:col-span-1 border-t md:border-t-0 md:border-l border-white/10 pt-3 md:pt-0 md:pl-4' : ''}`}>
                     <p className={`text-xs font-semibold ${isTotal ? 'text-[#6b8cff]' : 'text-white/40'}`}>{name}</p>
@@ -340,6 +341,10 @@ export default function PerformancePage() {
                     <div>
                       <p className="text-white/50 text-xs mb-0.5">퇴직연금 적립</p>
                       <p className="text-white/70 font-semibold text-sm whitespace-nowrap">{fmt(s.pension)}원</p>
+                    </div>
+                    <div>
+                      <p className="text-white/50 text-xs mb-0.5">적립금 (20%)</p>
+                      <p className="text-white/70 font-semibold text-sm whitespace-nowrap">{fmt(s.reserve)}원</p>
                     </div>
                   </div>
                 ))}
