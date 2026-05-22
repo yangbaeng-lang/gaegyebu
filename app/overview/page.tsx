@@ -185,7 +185,7 @@ export default function OverviewPage() {
   const yProps = { tick: { fontSize: 10, fill: '#9ca3af' }, axisLine: false as const, tickLine: false as const, width: 48 }
 
   return (
-    <div className="flex-1 flex flex-col overflow-y-auto md:overflow-hidden bg-gray-50">
+    <div className="flex-1 overflow-y-auto bg-gray-50">
 
       {/* 헤더 */}
       <div className="px-4 md:px-8 pt-4 pb-2 flex-shrink-0">
@@ -207,11 +207,11 @@ export default function OverviewPage() {
         })}
       </div>
 
-      {/* 차트 영역 — 뷰포트 나머지 채우기 */}
-      <div className="px-4 pb-4 flex flex-col gap-3 md:flex-1 md:min-h-0 md:px-8">
+      {/* 차트 영역 */}
+      <div className="px-4 pb-8 flex flex-col gap-3 md:px-8">
 
         {/* Row 1: 요약 + 섹션 비교 */}
-        <div className="flex flex-col gap-3 md:flex-row md:min-h-0" style={{ flex: 3 }}>
+        <div className="flex flex-col gap-3 md:flex-row md:h-[340px]">
 
           {/* 합계 요약 */}
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm px-5 py-4 flex flex-col md:w-72 md:flex-shrink-0">
@@ -226,7 +226,7 @@ export default function OverviewPage() {
           </div>
 
           {/* 섹션별 비교 차트 */}
-          <div className="h-[240px] bg-white rounded-2xl border border-gray-100 shadow-sm p-4 flex flex-col md:h-auto md:flex-1 md:min-w-0">
+          <div className="h-[300px] bg-white rounded-2xl border border-gray-100 shadow-sm p-4 flex flex-col md:h-auto md:flex-1 md:min-w-0">
             <p className="text-sm font-semibold text-gray-600 mb-2 flex-shrink-0">섹션별 자산 / 부채 / 순자산</p>
             <div className="flex-1 min-h-0">
               {filteredSummary.length === 0
@@ -235,7 +235,7 @@ export default function OverviewPage() {
                   <ResponsiveContainer width="100%" height="100%">
                     <ComposedChart
                       data={filteredSummary.map(d => ({ name: d.name, 자산: d.totalAssets, 부채: d.totalLiab, 순자산: d.netWorth }))}
-                      margin={{ top: 10, right: 12, left: 0, bottom: 4 }} barCategoryGap="28%" barGap={3}>
+                      margin={{ top: 24, right: 12, left: 0, bottom: 4 }} barCategoryGap="28%" barGap={3}>
                       <XAxis dataKey="name" tick={{ fontSize: 11, fill: '#6b7280' }} axisLine={false} tickLine={false} />
                       <YAxis tickFormatter={fmtY} {...yProps} />
                       <Tooltip content={<CustomTooltip />} cursor={{ fill: '#f3f4f6' }} />
@@ -255,10 +255,10 @@ export default function OverviewPage() {
         </div>
 
         {/* Row 2: 추이 2개 */}
-        <div className="flex flex-col gap-3 md:flex-row md:min-h-0" style={{ flex: 4 }}>
+        <div className="flex flex-col gap-3 md:flex-row md:h-[340px]">
 
           {/* 수입/지출/순수익 추이 */}
-          <div className="h-[240px] bg-white rounded-2xl border border-gray-100 shadow-sm p-4 flex flex-col md:h-auto md:flex-1 md:min-w-0">
+          <div className="h-[300px] bg-white rounded-2xl border border-gray-100 shadow-sm p-4 flex flex-col md:h-auto md:flex-1 md:min-w-0">
             <div className="flex items-center justify-between mb-2 flex-shrink-0">
               <p className="text-sm font-semibold text-gray-600">{mode === 'monthly' ? '월별' : '연도별'} 수입 / 지출 / 순수익</p>
               <ModeToggle mode={mode} onChange={handleMode} />
@@ -286,7 +286,7 @@ export default function OverviewPage() {
                   return (
                     <ScrollChart data={cd}>
                       {(w, h) => (
-                        <ComposedChart data={cd} width={w} height={h} margin={{ top: 10, right: 8, left: 0, bottom: 4 }} barCategoryGap="32%" barGap={2}>
+                        <ComposedChart data={cd} width={w} height={h} margin={{ top: 24, right: 8, left: 0, bottom: 4 }} barCategoryGap="32%" barGap={2}>
                           <XAxis dataKey="label" {...xProps} />
                           <YAxis yAxisId="amt" tickFormatter={fmtY} {...yProps} />
                           <YAxis yAxisId="pct" orientation="right" hide width={0} />
@@ -311,7 +311,7 @@ export default function OverviewPage() {
           </div>
 
           {/* 자산/부채/순자산 추이 */}
-          <div className="h-[240px] bg-white rounded-2xl border border-gray-100 shadow-sm p-4 flex flex-col md:h-auto md:flex-1 md:min-w-0">
+          <div className="h-[300px] bg-white rounded-2xl border border-gray-100 shadow-sm p-4 flex flex-col md:h-auto md:flex-1 md:min-w-0">
             <div className="flex items-center justify-between mb-2 flex-shrink-0">
               <p className="text-sm font-semibold text-gray-600">{mode === 'monthly' ? '월별' : '연도별'} 자산 / 부채 / 순자산</p>
               <ModeToggle mode={mode} onChange={handleMode} />
@@ -339,7 +339,7 @@ export default function OverviewPage() {
                   return (
                     <ScrollChart data={cd}>
                       {(w, h) => (
-                        <ComposedChart data={cd} width={w} height={h} margin={{ top: 10, right: 8, left: 0, bottom: 4 }} barCategoryGap="32%" barGap={2}>
+                        <ComposedChart data={cd} width={w} height={h} margin={{ top: 24, right: 8, left: 0, bottom: 4 }} barCategoryGap="32%" barGap={2}>
                           <XAxis dataKey="label" {...xProps} />
                           <YAxis yAxisId="amt" tickFormatter={fmtY} {...yProps} />
                           <YAxis yAxisId="pct" orientation="right" width={0} tick={false} axisLine={false} tickLine={false} />
@@ -365,8 +365,8 @@ export default function OverviewPage() {
         </div>
 
         {/* Row 3: 누적 순이익 */}
-        <div className="md:min-h-0" style={{ flex: 3 }}>
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 flex flex-col md:h-full md:min-h-0">
+        <div>
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 flex flex-col">
             <div className="flex items-center justify-between mb-2 flex-shrink-0">
               <p className="text-sm font-semibold text-gray-600">{mode === 'monthly' ? '월별' : '연도별'} 섹션별 누적 순이익</p>
               <ModeToggle mode={mode} onChange={handleMode} />
@@ -388,7 +388,7 @@ export default function OverviewPage() {
                 })}
               </div>
             )}
-            <div className="h-[200px] md:flex-1 md:min-h-0">
+            <div className="h-[300px]">
             {cumulLoading
               ? <div className="h-full flex items-center justify-center text-gray-300 text-sm">불러오는 중…</div>
               : cumulData.series.length === 0
@@ -399,7 +399,7 @@ export default function OverviewPage() {
                   return (
                   <ScrollChart data={cumulData.series}>
                     {(w, h) => (
-                      <BarChart data={cumulData.series} width={w} height={h} margin={{ top: 10, right: 8, left: 0, bottom: 4 }} barCategoryGap="30%" barGap={0}>
+                      <BarChart data={cumulData.series} width={w} height={h} margin={{ top: 24, right: 8, left: 0, bottom: 4 }} barCategoryGap="30%" barGap={0}>
                         <XAxis dataKey="label" {...xProps} />
                         <YAxis tickFormatter={fmtY} {...yProps} />
                         <Tooltip formatter={(value: number, name: string) => [fmtFull(value), name]} contentStyle={{ fontSize: 12, fontWeight: 'bold', borderRadius: 12, border: '1px solid #e5e7eb', boxShadow: '0 4px 12px rgba(0,0,0,0.08)' }} cursor={{ fill: '#f3f4f6' }} />

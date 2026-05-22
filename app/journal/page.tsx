@@ -85,9 +85,8 @@ export default function JournalPage() {
 
   const period       = usePeriod()
   const panelPeriod  = usePeriod()
-  const { refreshKey: sessionKey } = useSession()
+  const { refreshKey: sessionKey, currentSid: sessionId } = useSession()
   const [txs,        setTxs]        = useState<Tx[]>([])
-  const [sessionId,  setSessionId]  = useState(1)
   const [panelTxs,   setPanelTxs]   = useState<Tx[]>([])
   const [cats,       setCats]       = useState<Cats>({ account_asset: [], account_liability: [], expense: [], income: [], networth: [] })
   const [editTx,     setEditTx]     = useState<Tx | null>(null)
@@ -126,16 +125,12 @@ export default function JournalPage() {
   useEffect(() => { fetchTxs() }, [period.dateFrom, period.dateTo, dateFrom, dateTo, sessionKey])
   useEffect(() => { setMainSelectedIds(new Set()) }, [period.dateFrom, period.dateTo, dateFrom, dateTo, typeFilter, q])
   useEffect(() => {
-    fetch('/api/sessions', { cache: 'no-cache' }).then(r => r.json()).then(d => setSessionId(d.current ?? 1))
-  }, [sessionKey])
-
-  useEffect(() => {
     if (!panel) return
     fetchPanelTxs(panelPeriod.dateFrom, panelPeriod.dateTo)
   }, [panel, panelPeriod.dateFrom, panelPeriod.dateTo, sessionKey])
 
   useEffect(() => {
-    fetch('/api/categories', { cache: 'no-cache' }).then(r => r.json()).then(json => {
+    fetch('/api/categories').then(r => r.json()).then(json => {
       const names = (arr: { name: string }[]) => arr?.map(c => c.name) ?? []
       setCats({
         account_asset:     names(json.grouped.account_asset),

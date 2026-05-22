@@ -1,16 +1,17 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import prisma from '@/lib/db'
 
-export const dynamic = 'force-dynamic'
+export async function GET(req: NextRequest) {
+  const toParam  = req.nextUrl.searchParams.get('to')
+  const replayTo = toParam ?? new Date().toISOString().slice(0, 10)
 
-export async function GET() {
   const sessions = await prisma.session.findMany({ orderBy: [{ sortOrder: 'asc' }, { id: 'asc' }] })
 
   const results = await Promise.all(
     sessions.map(async (s) => {
       const [assets, txs] = await Promise.all([
         prisma.asset.findMany({ where: { sessionId: s.id } }),
-        prisma.transaction.findMany({ where: { sessionId: s.id }, orderBy: { date: 'asc' } }),
+        prisma.transaction.findMany({ where: { sessionId: s.id, date: { lte: replayTo } }, orderBy: { date: 'asc' } }),
       ])
 
       const kindMap: Record<string, string> = {}
@@ -46,5 +47,7 @@ export async function GET() {
     })
   )
 
-  return NextResponse.json(results)
+  return NextResponse.json(results, {
+    headers: { 'Cache-Control': 'private, max-age=5, stale-while-revalidate=10', 'Vary': 'Cookie' },
+  })
 }

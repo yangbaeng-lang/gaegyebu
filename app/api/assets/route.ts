@@ -19,11 +19,8 @@ export async function GET(req: NextRequest) {
   const kindMap: Record<string, string> = {}
   items.forEach(a => { kindMap[a.type] = a.kind })
 
-  const cutoff = toParam ?? (yearMonth ? `${yearMonth}-31` : null)
-  const today  = new Date().toISOString().slice(0, 10)
-
-  // 미래 날짜 cutoff는 오늘까지만 계산, 항상 트랜잭션 재계산으로 일관성 유지
-  const replayTo = cutoff ? (cutoff > today ? today : cutoff) : today
+  const cutoff  = toParam ?? (yearMonth ? `${yearMonth}-31` : null)
+  const replayTo = cutoff ?? new Date().toISOString().slice(0, 10)
 
   const txs = await prisma.transaction.findMany({
     where: { sessionId: sid, date: { lte: replayTo } },

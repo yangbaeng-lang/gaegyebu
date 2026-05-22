@@ -127,8 +127,6 @@ export async function POST(req: NextRequest) {
       sessionId: number; date: string; desc: string; amount: number;
       fromAcct: string; toAcct: string; memo: string; type: string;
     }[] = []
-    const assetDeltas = new Map<string, number>()
-
     // 새로 추가할 카테고리/자산 수집
     const newCats: { sessionId: number; type: string; name: string; sortOrder: number; group: string }[] = []
     const newAssets: { sessionId: number; name: string; type: string; kind: string; amount: number; color: string; icon: string }[] = []
@@ -181,14 +179,6 @@ export async function POST(req: NextRequest) {
 
           const type = inferType(parsed.fromPrefix, parsed.toPrefix)
           newTxs.push({ sessionId: sid, date: parsed.date, desc: parsed.desc, amount: parsed.amount, fromAcct: parsed.fromAcct, toAcct: parsed.toAcct, memo: parsed.memo, type })
-
-          // 자산 변화 누적
-          if (type === 'income')   assetDeltas.set(parsed.toAcct,   (assetDeltas.get(parsed.toAcct)   ?? 0) + parsed.amount)
-          if (type === 'expense')  assetDeltas.set(parsed.fromAcct, (assetDeltas.get(parsed.fromAcct) ?? 0) - parsed.amount)
-          if (type === 'transfer') {
-            assetDeltas.set(parsed.fromAcct, (assetDeltas.get(parsed.fromAcct) ?? 0) - parsed.amount)
-            assetDeltas.set(parsed.toAcct,   (assetDeltas.get(parsed.toAcct)   ?? 0) + parsed.amount)
-          }
           imported++
         } catch (e) {
           errors.push(`행${i}: ${e}`)
@@ -210,17 +200,6 @@ export async function POST(req: NextRequest) {
     }
     if (newTxs.length > 0) {
       await prisma.transaction.createMany({ data: newTxs })
-    }
-
-    // 자산 잔액 일괄 업데이트 (계정당 1회)
-    for (const [acctName, delta] of Array.from(assetDeltas.entries())) {
-      if (delta === 0) continue
-      const asset = assetMap.get(acctName)
-      if (!asset || asset.id === -1) continue
-      const actualDelta = asset.kind === 'liability' ? -delta : delta
-      try {
-        await prisma.asset.update({ where: { id: asset.id }, data: { amount: { increment: actualDelta } } })
-      } catch {}
     }
 
     return NextResponse.json({ imported, skipped, duplicates, inFileDuplicates, errors: errors.slice(0, 10) })

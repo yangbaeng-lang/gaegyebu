@@ -8,9 +8,9 @@ type Props = {
   className?: string
   placeholder?: string
   decimalPlaces?: number
-}
+} & Omit<React.InputHTMLAttributes<HTMLInputElement>, 'value' | 'onChange' | 'type' | 'inputMode'>
 
-export default function AmountInput({ value, onChange, className, placeholder, decimalPlaces: propDecimalPlaces }: Props) {
+export default function AmountInput({ value, onChange, className, placeholder, decimalPlaces: propDecimalPlaces, ...rest }: Props) {
   const { decimalPlaces: ctxDecimalPlaces } = useSession()
   const decimalPlaces = propDecimalPlaces ?? ctxDecimalPlaces
 
@@ -69,6 +69,7 @@ export default function AmountInput({ value, onChange, className, placeholder, d
       onChange={handleChange}
       placeholder={placeholder ?? '0'}
       className={className}
+      {...rest}
     />
   )
 }

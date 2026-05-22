@@ -48,7 +48,7 @@ export default function AnalyticsPage() {
   const lastDragIdx  = useRef(-1)
 
   useEffect(() => {
-    fetch(`/api/analytics?from=${period.dateFrom}&to=${period.dateTo}&viewMode=${period.viewMode}`, { cache: 'no-cache' })
+    fetch(`/api/analytics?from=${period.dateFrom}&to=${period.dateTo}&viewMode=${period.viewMode}`)
       .then(r => r.json())
       .then(d => {
         setSummary(d.summary)
@@ -60,7 +60,7 @@ export default function AnalyticsPage() {
   }, [period.dateFrom, period.dateTo, period.viewMode, txKey, sessionKey])
 
   useEffect(() => {
-    fetch('/api/categories', { cache: 'no-cache' }).then(r => r.json()).then(json => setCats(json.raw ?? []))
+    fetch('/api/categories').then(r => r.json()).then(json => setCats(json.raw ?? []))
   }, [sessionKey])
 
   useEffect(() => {

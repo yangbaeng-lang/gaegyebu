@@ -40,22 +40,6 @@ export async function GET(req: NextRequest) {
   })
 }
 
-async function updateAsset(acctName: string, delta: number, sid: number) {
-  const asset = await prisma.asset.findFirst({ where: { type: acctName, sessionId: sid } })
-  if (!asset) return
-  const actualDelta = asset.kind === 'liability' ? -delta : delta
-  await prisma.asset.update({
-    where: { id: asset.id },
-    data:  { amount: { increment: actualDelta } },
-  })
-}
-
-async function applyAssetDelta(type: string, fromAcct: string, toAcct: string, amount: number, sid: number) {
-  if (type === 'income')   { await updateAsset(toAcct,   amount,  sid) }
-  if (type === 'expense')  { await updateAsset(fromAcct, -amount, sid) }
-  if (type === 'transfer') { await updateAsset(fromAcct, -amount, sid); await updateAsset(toAcct, amount, sid) }
-}
-
 export async function POST(req: NextRequest) {
   const body = await req.json()
   const { type, date, desc, amount, fromAcct, toAcct, memo } = body
@@ -69,6 +53,5 @@ export async function POST(req: NextRequest) {
     data: { sessionId: sid, type, date, desc, amount: Number(amount), fromAcct, toAcct, memo: memo ?? '' },
   })
 
-  await applyAssetDelta(type, fromAcct, toAcct, Number(amount), sid)
   return NextResponse.json(tx, { status: 201 })
 }

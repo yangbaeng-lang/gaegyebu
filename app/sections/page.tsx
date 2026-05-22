@@ -2,6 +2,8 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useSession } from '@/lib/SessionContext'
+import PeriodNav from '@/components/PeriodNav'
+import { usePeriod } from '@/lib/usePeriod'
 
 type SectionSummary = {
   id: number
@@ -18,6 +20,7 @@ const fmt = (n: number) =>
 
 export default function SectionsPage() {
   const { refreshDecimalPlaces } = useSession()
+  const period = usePeriod()
   const [sections,    setSections]    = useState<SectionSummary[]>([])
   const [loading,     setLoading]     = useState(true)
   const [currentSid,  setCurrentSid]  = useState(1)
@@ -40,9 +43,9 @@ export default function SectionsPage() {
   const [selectedImportSid, setSelectedImportSid] = useState<number | null>(null)
   const [settingsModal, setSettingsModal] = useState<{ id: number; name: string; decimalPlaces: number } | null>(null)
 
-  const fetchData = () =>
+  const fetchData = (dateTo: string) =>
     Promise.all([
-      fetch('/api/sessions/summary').then(r => r.json()),
+      fetch(`/api/sessions/summary?to=${dateTo}`).then(r => r.json()),
       fetch('/api/sessions').then(r => r.json()),
     ]).then(([summary, sessions]) => {
       setSections(summary)
@@ -50,7 +53,7 @@ export default function SectionsPage() {
       setLoading(false)
     })
 
-  useEffect(() => { fetchData() }, [])
+  useEffect(() => { fetchData(period.dateTo) }, [period.dateTo])
 
   const handleDragStart = (index: number) => setDragIndex(index)
 
@@ -96,7 +99,7 @@ export default function SectionsPage() {
       setImportResult({ imported: 0, skipped: 0, error: `오류: ${e}` })
     } finally {
       setImporting(false)
-      fetchData()
+      fetchData(period.dateTo)
     }
   }
 
@@ -199,7 +202,7 @@ export default function SectionsPage() {
       body: JSON.stringify({ decimalPlaces: settingsModal.decimalPlaces }),
     })
     setSettingsModal(null)
-    fetchData()
+    fetchData(period.dateTo)
     if (settingsModal.id === currentSid) refreshDecimalPlaces()
   }
 
@@ -226,6 +229,15 @@ export default function SectionsPage() {
           </label>
         </div>
       </div>
+
+      {/* 기간 선택 */}
+      <PeriodNav
+        label={period.label} viewMode={period.viewMode} setViewMode={period.setViewMode}
+        year={period.year} setYear={period.setYear}
+        quarter={period.quarter} setQuarter={period.setQuarter}
+        month={period.month} setMonth={period.setMonth}
+        prev={period.prev} next={period.next}
+      />
 
       <div className="flex-1 overflow-y-auto p-5">
         <div className="max-w-[1080px] mx-auto space-y-4">

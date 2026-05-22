@@ -28,7 +28,7 @@ export default function SideNav() {
   const menuRef = useRef<HTMLDivElement>(null)
 
   const fetchSessions = () => {
-    fetch('/api/sessions', { cache: 'no-cache' }).then(r => r.json()).then(d => {
+    fetch('/api/sessions').then(r => r.json()).then(d => {
       setSessions(d.sessions ?? [])
       setCurrentSid(d.current ?? 1)
     })

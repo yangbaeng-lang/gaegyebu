@@ -3,6 +3,7 @@ import { createContext, useContext, useState, useCallback, useEffect, ReactNode 
 
 type SessionContextType = {
   refreshKey: number
+  currentSid: number
   decimalPlaces: number
   switchSession: (id: number) => Promise<void>
   refreshDecimalPlaces: () => void
@@ -10,6 +11,7 @@ type SessionContextType = {
 
 const SessionContext = createContext<SessionContextType>({
   refreshKey: 0,
+  currentSid: 1,
   decimalPlaces: 0,
   switchSession: async () => {},
   refreshDecimalPlaces: () => {},
@@ -17,12 +19,14 @@ const SessionContext = createContext<SessionContextType>({
 
 export function SessionProvider({ children }: { children: ReactNode }) {
   const [treeKey, setTreeKey] = useState(0)
+  const [currentSid, setCurrentSid] = useState(1)
   const [decimalPlaces, setDecimalPlaces] = useState(0)
 
   const fetchDecimalPlaces = useCallback(() => {
     fetch('/api/sessions', { cache: 'no-store' })
       .then(r => r.json())
       .then(({ sessions, current }: { sessions: { id: number; decimalPlaces: number }[]; current: number }) => {
+        setCurrentSid(current ?? 1)
         const session = sessions.find(s => s.id === current)
         setDecimalPlaces(session?.decimalPlaces ?? 0)
       })
@@ -38,7 +42,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   }, [])
 
   return (
-    <SessionContext.Provider value={{ refreshKey: treeKey, decimalPlaces, switchSession, refreshDecimalPlaces: fetchDecimalPlaces }}>
+    <SessionContext.Provider value={{ refreshKey: treeKey, currentSid, decimalPlaces, switchSession, refreshDecimalPlaces: fetchDecimalPlaces }}>
       <div key={treeKey} style={{ display: 'contents' }}>
         {children}
       </div>
