@@ -13,6 +13,7 @@ type BudgetItem = {
   spent: number; remain: number; pct: number; status: 'safe'|'warn'|'over'
 }
 type EditTarget = BudgetItem & { budgetType: 'income'|'expense' }
+type MonthSummary = { income: number; expense: number }
 
 const INC_STATUS_COLOR: Record<string, string> = { over: '#2a9d5c', warn: '#4a6fdb', safe: '#9ca3af' }
 const INC_DEFAULT_META = { icon: 'ti-coins', color: '#2a9d5c', bg: '#f0fff6' }
@@ -54,13 +55,14 @@ function BudgetRow({ b, isIncome, onEdit }: { b: BudgetItem; isIncome: boolean; 
 }
 
 function BulkRow({
-  category, isIncome, value, onChange, containerRef,
+  category, isIncome, value, actual, onChange, containerRef,
 }: {
-  category: string; isIncome: boolean; value: number
+  category: string; isIncome: boolean; value: number; actual: number
   onChange: (v: number) => void
   containerRef: React.RefObject<HTMLDivElement>
 }) {
-  const meta = CAT_META[category] ?? (isIncome ? INC_DEFAULT_META : EXP_DEFAULT_META)
+  const meta        = CAT_META[category] ?? (isIncome ? INC_DEFAULT_META : EXP_DEFAULT_META)
+  const actualColor = isIncome ? '#2a9d5c' : '#d94f4f'
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') {
@@ -79,6 +81,20 @@ function BulkRow({
         <i className={`ti ${meta.icon} text-[10px]`} style={{ color: meta.color }} />
       </div>
       <span className="flex-1 text-sm text-gray-700 truncate min-w-0">{category}</span>
+      {actual > 0 ? (
+        <button
+          type="button"
+          onClick={() => onChange(actual)}
+          title="실제 금액을 예산으로 복사"
+          className="flex-shrink-0 flex items-center gap-1 text-[10px] px-1.5 h-6 rounded-md border border-gray-200 hover:border-blue-300 hover:bg-blue-50 transition-colors tabular-nums"
+          style={{ color: actualColor }}
+        >
+          {fmtK(actual)}
+          <i className="ti ti-copy text-[9px] opacity-60" />
+        </button>
+      ) : (
+        <span className="flex-shrink-0 text-[10px] text-gray-300 w-14 text-right tabular-nums">-</span>
+      )}
       <AmountInput
         value={value}
         onChange={onChange}
@@ -107,9 +123,27 @@ export default function BudgetPage() {
   const [bulkValues, setBulkValues] = useState<Record<string, number>>({})
   const [bulkSaving, setBulkSaving] = useState(false)
   const [copying,    setCopying]    = useState(false)
-  const bulkRef = useRef<HTMLDivElement>(null)
+  const [monthPicker,  setMonthPicker]  = useState(false)
+  const [pickYear,     setPickYear]     = useState(0)
+  const [monthAmounts, setMonthAmounts] = useState<Record<string, MonthSummary>>({})
+  const [loadingMonths, setLoadingMonths] = useState(false)
+  const bulkRef         = useRef<HTMLDivElement>(null)
+  const copyBtnRef      = useRef<HTMLButtonElement>(null)
+  const monthPickerRef  = useRef<HTMLDivElement>(null)
 
   const saveYm = period.dateFrom.slice(0, 7)
+
+  function getPeriodMonths(): string[] {
+    const [fy, fm] = period.dateFrom.slice(0, 7).split('-').map(Number)
+    const [ty, tm] = period.dateTo.slice(0, 7).split('-').map(Number)
+    const result: string[] = []
+    let y = fy, m = fm
+    while (y < ty || (y === ty && m <= tm)) {
+      result.push(`${y}-${String(m).padStart(2, '0')}`)
+      m++; if (m > 12) { m = 1; y++ }
+    }
+    return result
+  }
 
   const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(''), 2500) }
 
@@ -131,6 +165,39 @@ export default function BudgetPage() {
 
   useEffect(() => { fetchData() }, [period.dateFrom, period.dateTo, sessionKey])
   useEffect(() => { setBulkEdit(false) }, [period.dateFrom, period.dateTo])
+  useEffect(() => {
+    if (!monthPicker) return
+    const close = (e: MouseEvent) => {
+      if (monthPickerRef.current?.contains(e.target as Node)) return
+      if (copyBtnRef.current?.contains(e.target as Node)) return
+      setMonthPicker(false)
+    }
+    document.addEventListener('mousedown', close)
+    return () => document.removeEventListener('mousedown', close)
+  }, [monthPicker])
+
+  useEffect(() => {
+    if (!monthPicker) return
+    let cancelled = false
+    setLoadingMonths(true)
+    Promise.all(
+      Array.from({ length: 12 }, async (_, i) => {
+        const m  = i + 1
+        const ym = `${pickYear}-${String(m).padStart(2, '0')}`
+        const [iRes, eRes] = await Promise.all([
+          fetch(`/api/budgets?from=${ym}-01&to=${ym}-31&type=income`),
+          fetch(`/api/budgets?from=${ym}-01&to=${ym}-31&type=expense`),
+        ])
+        const [iJson, eJson] = await Promise.all([iRes.json(), eRes.json()])
+        return [ym, { income: iJson.summary?.totalSpent ?? 0, expense: eJson.summary?.totalSpent ?? 0 }] as [string, MonthSummary]
+      })
+    ).then(pairs => {
+      if (!cancelled) setMonthAmounts(Object.fromEntries(pairs))
+    }).finally(() => {
+      if (!cancelled) setLoadingMonths(false)
+    })
+    return () => { cancelled = true }
+  }, [monthPicker, pickYear])
 
   const openEdit = (b: BudgetItem, budgetType: 'income'|'expense') => {
     setEditTarget({ ...b, budgetType })
@@ -160,15 +227,18 @@ export default function BudgetPage() {
 
   const saveBulk = async () => {
     setBulkSaving(true)
-    const all = [
-      ...incomeBudgets.map(b  => ({ category: b.category,  amount: bulkValues[`inc_${b.category}`] ?? 0,  budgetType: 'income'  as const })),
-      ...expenseBudgets.map(b => ({ category: b.category,  amount: bulkValues[`exp_${b.category}`] ?? 0,  budgetType: 'expense' as const })),
-    ]
+    const months = getPeriodMonths()
+    const cnt = months.length
+    // 입력값은 기간 합계 → 각 월에 균등 분배
+    const all = months.flatMap(ym => [
+      ...incomeBudgets.map(b  => ({ category: b.category, amount: Math.round((bulkValues[`inc_${b.category}`] ?? 0) / cnt), budgetType: 'income'  as const, yearMonth: ym })),
+      ...expenseBudgets.map(b => ({ category: b.category, amount: Math.round((bulkValues[`exp_${b.category}`] ?? 0) / cnt), budgetType: 'expense' as const, yearMonth: ym })),
+    ])
     await Promise.all(all.map(item =>
       fetch('/api/budgets', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...item, yearMonth: saveYm }),
+        body: JSON.stringify(item),
       })
     ))
     setBulkSaving(false)
@@ -184,33 +254,79 @@ export default function BudgetPage() {
     setBulkValues(vals)
   }
 
-  const copyPrevMonth = async () => {
-    const [y, m] = saveYm.split('-').map(Number)
-    const prevYm  = m === 1 ? `${y - 1}-12` : `${y}-${String(m - 1).padStart(2, '0')}`
-    const prevDate = `${prevYm}-01`
+  const copyPrevPeriod = () => {
+    if (period.viewMode === 'month') {
+      setPickYear(period.year)
+      setMonthPicker(v => !v)
+      return
+    }
+    let prevFrom: string, prevTo: string, prevLabel: string
+    if (period.viewMode === 'year') {
+      prevFrom = `${period.year - 1}-01-01`
+      prevTo   = `${period.year - 1}-12-31`
+      prevLabel = `${period.year - 1}년`
+    } else {
+      const prevYear = period.quarter === 1 ? period.year - 1 : period.year
+      const prevQ    = period.quarter === 1 ? 4 : period.quarter - 1
+      const qStart   = (prevQ - 1) * 3 + 1
+      const qEnd     = prevQ * 3
+      prevFrom  = `${prevYear}-${String(qStart).padStart(2, '0')}-01`
+      prevTo    = `${prevYear}-${String(qEnd).padStart(2, '0')}-31`
+      prevLabel = `${prevYear}년 Q${prevQ}`
+    }
+    doCopy(prevFrom, prevTo, prevLabel)
+  }
+
+  const copyFromMonth = (m: number) => {
+    setMonthPicker(false)
+    const ym = `${pickYear}-${String(m).padStart(2, '0')}`
+    doCopy(`${ym}-01`, `${ym}-31`, `${pickYear}년 ${m}월`)
+  }
+
+  const doCopy = async (prevFrom: string, prevTo: string, prevLabel: string) => {
     setCopying(true)
     try {
       const [iRes, eRes] = await Promise.all([
-        fetch(`/api/budgets?from=${prevDate}&to=${prevDate}&type=income`),
-        fetch(`/api/budgets?from=${prevDate}&to=${prevDate}&type=expense`),
+        fetch(`/api/budgets?from=${prevFrom}&to=${prevTo}&type=income`),
+        fetch(`/api/budgets?from=${prevFrom}&to=${prevTo}&type=expense`),
       ])
       const [iJson, eJson] = await Promise.all([iRes.json(), eRes.json()])
       const prev: BudgetItem[] = [...(iJson.data ?? []), ...(eJson.data ?? [])]
       if (prev.every(b => b.amount === 0)) {
-        showToast(`${prevYm} 예산 데이터가 없습니다`)
+        showToast(`${prevLabel} 예산 데이터가 없습니다`)
         return
       }
-      setBulkValues(prev => {
-        const next = { ...prev }
+      setBulkValues(cur => {
+        const next = { ...cur }
         ;(iJson.data ?? []).forEach((b: BudgetItem) => { next[`inc_${b.category}`] = b.amount })
         ;(eJson.data ?? []).forEach((b: BudgetItem) => { next[`exp_${b.category}`] = b.amount })
         return next
       })
-      showToast(`${prevYm} 예산을 가져왔습니다`)
+      showToast(`${prevLabel} 예산을 가져왔습니다`)
     } finally {
       setCopying(false)
     }
   }
+
+  const copyActualIncome = () => {
+    setBulkValues(cur => {
+      const next = { ...cur }
+      incomeBudgets.forEach(b => { next[`inc_${b.category}`] = b.spent })
+      return next
+    })
+    showToast('수입 실적을 예산으로 복사했습니다')
+  }
+
+  const copyActualExpense = () => {
+    setBulkValues(cur => {
+      const next = { ...cur }
+      expenseBudgets.forEach(b => { next[`exp_${b.category}`] = b.spent })
+      return next
+    })
+    showToast('지출 실적을 예산으로 복사했습니다')
+  }
+
+  const copyBtnLabel = period.viewMode === 'year' ? '전년 복사' : period.viewMode === 'quarter' ? '전분기 복사' : '월 선택 복사'
 
   const incPct = incomeSummary.totalBudget > 0 ? Math.round(incomeSummary.totalSpent / incomeSummary.totalBudget * 100) : 0
   const expPct = expenseSummary.totalBudget > 0 ? Math.round(expenseSummary.totalSpent / expenseSummary.totalBudget * 100) : 0
@@ -253,10 +369,59 @@ export default function BudgetPage() {
             className="flex items-center gap-1.5 px-3 h-8 border border-red-200 rounded-lg text-red-500 text-xs font-medium hover:bg-red-50 transition-colors">
             <i className="ti ti-trash text-sm" />초기화
           </button>
-          <button onClick={copyPrevMonth} disabled={copying}
-            className="flex items-center gap-1.5 px-3 h-8 border border-gray-200 rounded-lg text-gray-600 text-xs font-medium hover:bg-gray-50 transition-colors disabled:opacity-50">
-            <i className="ti ti-copy text-sm" />{copying ? '가져오는 중...' : '전달 복사'}
-          </button>
+          <div className="relative">
+            <button ref={copyBtnRef} onClick={copyPrevPeriod} disabled={copying}
+              className="flex items-center gap-1.5 px-3 h-8 border border-gray-200 rounded-lg text-gray-600 text-xs font-medium hover:bg-gray-50 transition-colors disabled:opacity-50">
+              <i className="ti ti-copy text-sm" />{copying ? '가져오는 중...' : copyBtnLabel}
+            </button>
+            {monthPicker && (
+              <div ref={monthPickerRef} className="absolute left-0 top-10 z-50 bg-white border border-gray-200 rounded-xl shadow-lg p-3 w-72">
+                <div className="flex items-center justify-between mb-2">
+                  <button onClick={() => setPickYear(y => y - 1)}
+                    className="w-6 h-6 flex items-center justify-center rounded hover:bg-gray-100 text-gray-500">
+                    <i className="ti ti-chevron-left text-xs" />
+                  </button>
+                  <span className="text-xs font-semibold text-gray-700">{pickYear}년</span>
+                  <button onClick={() => setPickYear(y => y + 1)}
+                    className="w-6 h-6 flex items-center justify-center rounded hover:bg-gray-100 text-gray-500">
+                    <i className="ti ti-chevron-right text-xs" />
+                  </button>
+                </div>
+                <div className="grid grid-cols-[2.5rem_1fr_1fr] text-[10px] px-2 pb-1.5 border-b border-gray-100">
+                  <span />
+                  <span className="text-right font-medium" style={{ color: '#2a9d5c' }}>실제수입</span>
+                  <span className="text-right font-medium" style={{ color: '#d94f4f' }}>실제지출</span>
+                </div>
+                {loadingMonths ? (
+                  <div className="text-center py-4 text-[10px] text-gray-400">불러오는 중...</div>
+                ) : (
+                  <div className="mt-1">
+                    {Array.from({ length: 12 }, (_, i) => i + 1).map(m => {
+                      const isCurrent = pickYear === period.year && m === period.month + 1
+                      const ym  = `${pickYear}-${String(m).padStart(2, '0')}`
+                      const amt = monthAmounts[ym] ?? { income: 0, expense: 0 }
+                      return (
+                        <button key={m} onClick={() => copyFromMonth(m)}
+                          disabled={isCurrent}
+                          className={`w-full grid grid-cols-[2.5rem_1fr_1fr] items-center px-2 py-1.5 rounded-lg transition-colors
+                            ${isCurrent ? 'opacity-40 cursor-not-allowed bg-gray-50' : 'hover:bg-[#6b8cff]/10'}`}>
+                          <span className="text-xs font-medium text-gray-700 text-left">{m}월</span>
+                          <span className="text-[11px] text-right tabular-nums"
+                                style={{ color: amt.income > 0 ? '#2a9d5c' : '#d1d5db' }}>
+                            {amt.income > 0 ? fmtK(amt.income) : '-'}
+                          </span>
+                          <span className="text-[11px] text-right tabular-nums"
+                                style={{ color: amt.expense > 0 ? '#d94f4f' : '#d1d5db' }}>
+                            {amt.expense > 0 ? fmtK(amt.expense) : '-'}
+                          </span>
+                        </button>
+                      )
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
           <div className="flex-1" />
           <button onClick={() => setBulkEdit(false)}
             className="px-3 h-8 border border-gray-200 rounded-lg text-gray-500 text-xs font-medium hover:bg-gray-50 transition-colors">
@@ -312,13 +477,17 @@ export default function BudgetPage() {
                 <div className="flex items-center gap-2 px-3 py-2 border-b border-gray-100 bg-gray-50">
                   <i className="ti ti-trending-up text-xs" style={{ color: '#2a9d5c' }} />
                   <h3 className="text-xs font-semibold text-gray-600 flex-1">수입 목표</h3>
-                  <span className="text-[10px] text-gray-400">금액 입력 후 Enter</span>
+                  <button onClick={copyActualIncome}
+                    className="flex items-center gap-1 text-[10px] px-2 h-6 rounded-md border border-gray-200 hover:border-[#2a9d5c] hover:bg-green-50 text-gray-500 hover:text-[#2a9d5c] transition-colors">
+                    <i className="ti ti-copy text-[9px]" />실적 일괄복사
+                  </button>
                 </div>
                 {incomeBudgets.length === 0
                   ? <p className="text-xs text-gray-300 text-center py-6">수입 카테고리가 없습니다</p>
                   : <div className="py-1">
                       {incomeBudgets.map(b => (
                         <BulkRow key={b.category} category={b.category} isIncome={true}
+                          actual={b.spent}
                           value={bulkValues[`inc_${b.category}`] ?? 0}
                           onChange={v => setBulkValues(prev => ({ ...prev, [`inc_${b.category}`]: v }))}
                           containerRef={bulkRef}
@@ -333,13 +502,17 @@ export default function BudgetPage() {
                 <div className="flex items-center gap-2 px-3 py-2 border-b border-gray-100 bg-gray-50">
                   <i className="ti ti-trending-down text-xs" style={{ color: '#d94f4f' }} />
                   <h3 className="text-xs font-semibold text-gray-600 flex-1">지출 예산</h3>
-                  <span className="text-[10px] text-gray-400">그룹별 설정</span>
+                  <button onClick={copyActualExpense}
+                    className="flex items-center gap-1 text-[10px] px-2 h-6 rounded-md border border-gray-200 hover:border-[#d94f4f] hover:bg-red-50 text-gray-500 hover:text-[#d94f4f] transition-colors">
+                    <i className="ti ti-copy text-[9px]" />실적 일괄복사
+                  </button>
                 </div>
                 {expenseBudgets.length === 0
                   ? <p className="text-xs text-gray-300 text-center py-6">지출 카테고리가 없습니다</p>
                   : <div className="py-1">
                       {expenseBudgets.map(b => (
                         <BulkRow key={b.category} category={b.category} isIncome={false}
+                          actual={b.spent}
                           value={bulkValues[`exp_${b.category}`] ?? 0}
                           onChange={v => setBulkValues(prev => ({ ...prev, [`exp_${b.category}`]: v }))}
                           containerRef={bulkRef}

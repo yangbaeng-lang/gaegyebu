@@ -1,5 +1,5 @@
 'use client'
-import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import {
   ComposedChart, BarChart, Bar, Line, PieChart, Pie, Cell,
   XAxis, YAxis, Tooltip, ReferenceLine, LabelList,
@@ -189,23 +189,23 @@ export default function ChartsPage() {
               <div className="flex items-center gap-3">
                 <h3 className="text-sm font-medium text-gray-700 flex-1">수입</h3>
                 <span className="flex items-center gap-1 text-[10px] text-gray-400">
-                  <span className="inline-block w-5 border-t-2 border-dashed border-[#2a9d5c]" />수입 목표
+                  <span className="inline-block w-3 h-2.5 rounded-sm bg-[#4fe8a0]" />실적
+                  <span className="inline-block w-3 h-2.5 rounded-sm bg-[#2a9d5c] opacity-50 ml-1" />목표
                 </span>
               </div>
             }>
               <ScrollChart key={mode} data={series} getValues={s => [s.income as number, s.incomeBudget as number]}>
                 {(w, h, domain, key) => (
-                  <ComposedChart key={key} width={w} height={h} data={series} barCategoryGap="35%" margin={{ top: 20 }}>
+                  <ComposedChart key={key} width={w} height={h} data={series} barCategoryGap="30%" barGap={2} margin={{ top: 20 }}>
                     <XAxis {...X_PROPS} />
                     <YAxis domain={domain} hide />
                     <Tooltip
-                      formatter={(v: number, name: string) => [fmt(v), name === 'income' ? '수입' : '목표']}
+                      formatter={(v: number, name: string) => [fmt(v), name === 'income' ? '수입' : '수입 목표']}
                       contentStyle={TIP} />
                     <Bar dataKey="income" fill="#4fe8a0" radius={[3,3,0,0]}>
                       <LabelList content={BarLabel} />
                     </Bar>
-                    <Line dataKey="incomeBudget" stroke="#2a9d5c" strokeWidth={1.5}
-                      strokeDasharray="4 3" dot={false} legendType="none" />
+                    <Bar dataKey="incomeBudget" fill="#2a9d5c" radius={[3,3,0,0]} opacity={0.5} />
                   </ComposedChart>
                 )}
               </ScrollChart>
@@ -214,18 +214,19 @@ export default function ChartsPage() {
               <div className="flex items-center gap-3">
                 <h3 className="text-sm font-medium text-gray-700 flex-1">순이익</h3>
                 <span className="flex items-center gap-1 text-[10px] text-gray-400">
-                  <span className="inline-block w-5 border-t-2 border-dashed border-[#6b8cff]" />순이익 목표
+                  <span className="inline-block w-3 h-2.5 rounded-sm bg-[#4a6fdb]" />실적
+                  <span className="inline-block w-3 h-2.5 rounded-sm bg-[#a5b4fc] opacity-70 ml-1" />목표
                 </span>
               </div>
             }>
               <ScrollChart key={mode} data={series} getValues={s => [s.profit as number, s.profitBudget as number]}>
                 {(w, h, domain, key) => (
-                  <ComposedChart key={key} width={w} height={h} data={series} barCategoryGap="35%" margin={{ top: 20 }}>
+                  <ComposedChart key={key} width={w} height={h} data={series} barCategoryGap="30%" barGap={2} margin={{ top: 20 }}>
                     <XAxis {...X_PROPS} />
                     <YAxis domain={domain} hide />
                     <ReferenceLine y={0} stroke="#e5e7eb" />
                     <Tooltip
-                      formatter={(v: number, name: string) => [fmt(v), name === 'profit' ? '순이익' : '목표']}
+                      formatter={(v: number, name: string) => [fmt(v), name === 'profit' ? '순이익' : '순이익 목표']}
                       contentStyle={TIP} />
                     <Bar dataKey="profit" radius={[3,3,0,0]}
                       fill="#4a6fdb"
@@ -238,8 +239,7 @@ export default function ChartsPage() {
                       }}>
                       <LabelList dataKey="profit" content={ProfitLabel} />
                     </Bar>
-                    <Line dataKey="profitBudget" stroke="#6b8cff" strokeWidth={1.5}
-                      strokeDasharray="4 3" dot={false} legendType="none" />
+                    <Bar dataKey="profitBudget" fill="#a5b4fc" radius={[3,3,0,0]} opacity={0.7} />
                   </ComposedChart>
                 )}
               </ScrollChart>
@@ -252,23 +252,23 @@ export default function ChartsPage() {
               <div className="flex items-center gap-3">
                 <h3 className="text-sm font-medium text-gray-700 flex-1">지출</h3>
                 <span className="flex items-center gap-1 text-[10px] text-gray-400">
-                  <span className="inline-block w-5 border-t-2 border-dashed border-[#d94f4f]" />예산 목표
+                  <span className="inline-block w-3 h-2.5 rounded-sm bg-[#ff9090]" />실적
+                  <span className="inline-block w-3 h-2.5 rounded-sm bg-[#d94f4f] opacity-50 ml-1" />예산
                 </span>
               </div>
             }>
               <ScrollChart key={mode} data={series} getValues={s => [s.expense as number, s.expenseBudget as number]}>
                 {(w, h, domain, key) => (
-                  <ComposedChart key={key} width={w} height={h} data={series} barCategoryGap="35%" margin={{ top: 20 }}>
+                  <ComposedChart key={key} width={w} height={h} data={series} barCategoryGap="30%" barGap={2} margin={{ top: 20 }}>
                     <XAxis {...X_PROPS} />
                     <YAxis domain={domain} hide />
                     <Tooltip
-                      formatter={(v: number, name: string) => [fmt(v), name === 'expense' ? '지출' : '예산']}
+                      formatter={(v: number, name: string) => [fmt(v), name === 'expense' ? '지출' : '예산 목표']}
                       contentStyle={TIP} />
                     <Bar dataKey="expense" fill="#ff9090" radius={[3,3,0,0]}>
                       <LabelList content={BarLabel} />
                     </Bar>
-                    <Line dataKey="expenseBudget" stroke="#d94f4f" strokeWidth={1.5}
-                      strokeDasharray="4 3" dot={false} legendType="none" />
+                    <Bar dataKey="expenseBudget" fill="#d94f4f" radius={[3,3,0,0]} opacity={0.5} />
                   </ComposedChart>
                 )}
               </ScrollChart>

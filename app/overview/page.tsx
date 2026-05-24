@@ -8,6 +8,9 @@ import {
 type SessionItem     = { id: number; name: string }
 type SectionSummary  = { id: number; name: string; totalAssets: number; totalLiab: number; netWorth: number }
 type SeriesItem      = { period: string; label: string; totalAssets: number; totalLiab: number; netWorth: number; income: number; expense: number; profit: number }
+type SectionPeriod    = { income: number; expense: number; profit: number; incomeBudget: number; expenseBudget: number; profitBudget: number }
+type SectionBudgetItem = { id: number; name: string; periodData: Record<string, SectionPeriod> }
+type SectionBudgetData = { periods: { period: string; label: string }[]; sections: SectionBudgetItem[] }
 
 const SECTION_COLORS = ['#4a6fdb','#2a9d5c','#f0a020','#8b5cf6','#06b6d4','#d94f4f','#ec4899','#84cc16']
 
@@ -69,14 +72,18 @@ function ScrollChart({ data, children }: {
     return () => ro.disconnect()
   }, [])
 
+  const barW   = dims.w > 0 ? Math.floor(dims.w / VISIBLE) : 60
+  const innerW = data.length > VISIBLE ? data.length * barW : dims.w
+
+  const pendingScroll = useRef(false)
+  useEffect(() => { pendingScroll.current = true }, [data])
   useEffect(() => {
+    if (!pendingScroll.current || innerW === 0) return
+    pendingScroll.current = false
     requestAnimationFrame(() => {
       if (wrapRef.current) wrapRef.current.scrollLeft = wrapRef.current.scrollWidth
     })
-  }, [data])
-
-  const barW   = dims.w > 0 ? Math.floor(dims.w / VISIBLE) : 60
-  const innerW = data.length > VISIBLE ? data.length * barW : dims.w
+  }, [innerW])
 
   return (
     <>
@@ -122,11 +129,22 @@ export default function OverviewPage() {
   const [cumulLoading,  setCumulLoading]  = useState(false)
   const [cumulVisible,  setCumulVisible]  = useState<Set<number>>(new Set())
   const cumulAbortRef = useRef<AbortController | null>(null)
+  const [sectionBudget, setSectionBudget] = useState<SectionBudgetData | null>(null)
+  const [selPeriod,     setSelPeriod]     = useState('')
 
   const fetchSeries = (m: string, ids: Set<number>) => {
     if (ids.size === 0) { setSeries([]); return Promise.resolve() }
     return fetch(`/api/overview/charts?mode=${m}&include=${Array.from(ids).join(',')}`)
       .then(r => r.json()).then((d: { series: SeriesItem[] }) => setSeries(d.series))
+  }
+
+  const fetchSectionBudget = (m: string) => {
+    return fetch(`/api/charts/sections?mode=${m}`)
+      .then(r => r.json())
+      .then((d: SectionBudgetData) => {
+        setSectionBudget(d)
+        if (d.periods.length > 0) setSelPeriod(d.periods[d.periods.length - 1].period)
+      })
   }
 
   const fetchCumul = (m: string, ids: Set<number>) => {
@@ -153,7 +171,7 @@ export default function OverviewPage() {
       const EXCLUDED = ['병훈급여','아름급여']
       const ids = new Set(sessions.filter(s => !EXCLUDED.includes(s.name)).map(s => s.id))
       setSelected(ids)
-      return Promise.all([fetchSeries(mode, ids), fetchCumul(mode, ids)])
+      return Promise.all([fetchSeries(mode, ids), fetchCumul(mode, ids), fetchSectionBudget(mode)])
     }).finally(() => setLoading(false))
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
@@ -169,7 +187,7 @@ export default function OverviewPage() {
   }
 
   const handleMode = (m: 'monthly'|'yearly') => {
-    setMode(m); fetchSeries(m, selected); fetchCumul(m, selected)
+    setMode(m); fetchSeries(m, selected); fetchCumul(m, selected); fetchSectionBudget(m)
   }
 
   const filteredSummary = summary.filter(d => selected.has(d.id))
@@ -431,6 +449,67 @@ export default function OverviewPage() {
             </div>
           </div>
         </div>
+
+        {/* Row 4: 섹션별 수입/지출/순이익 vs 목표 */}
+        {sectionBudget && sectionBudget.sections.length > 0 && (
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
+            <div className="flex items-center gap-2 mb-4">
+              <p className="text-sm font-semibold text-gray-600 flex-1">섹션별 수입 / 지출 / 순이익 vs 목표</p>
+              <ModeToggle mode={mode} onChange={handleMode} />
+              <select value={selPeriod} onChange={e => setSelPeriod(e.target.value)}
+                className="text-xs border border-gray-200 rounded-lg px-2 h-7 focus:outline-none focus:border-blue-300 text-gray-600">
+                {[...sectionBudget.periods].reverse().map(p => (
+                  <option key={p.period} value={p.period}>{p.label}</option>
+                ))}
+              </select>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {([
+                { key: 'income',  budgetKey: 'incomeBudget',  label: '수입',   actualColor: '#4fe8a0', budgetColor: '#2a9d5c' },
+                { key: 'expense', budgetKey: 'expenseBudget', label: '지출',   actualColor: '#ff9090', budgetColor: '#d94f4f' },
+                { key: 'profit',  budgetKey: 'profitBudget',  label: '순이익', actualColor: '#4a6fdb', budgetColor: '#a5b4fc' },
+              ] as const).map(m => {
+                const visibleSections = sectionBudget.sections.filter(s => selected.has(s.id))
+                const chartData = visibleSections.map(s => ({
+                  name: s.name,
+                  실적: s.periodData[selPeriod]?.[m.key] ?? 0,
+                  목표: s.periodData[selPeriod]?.[m.budgetKey] ?? 0,
+                }))
+                const hasData = chartData.some(d => d['실적'] !== 0 || d['목표'] !== 0)
+                return (
+                  <div key={m.key}>
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="text-xs font-semibold text-gray-600">{m.label}</span>
+                      <span className="flex items-center gap-1 text-[10px] text-gray-400">
+                        <span className="inline-block w-3 h-2.5 rounded-sm" style={{ background: m.actualColor }} />실적
+                        <span className="inline-block w-3 h-2.5 rounded-sm ml-1" style={{ background: m.budgetColor, opacity: 0.5 }} />목표
+                      </span>
+                    </div>
+                    <div className="h-[180px]">
+                      {!hasData
+                        ? <div className="h-full flex items-center justify-center text-gray-300 text-xs">데이터 없음</div>
+                        : (
+                          <ResponsiveContainer width="100%" height="100%">
+                            <BarChart data={chartData} barCategoryGap="30%" barGap={3} margin={{ top: 20, right: 8, left: 0, bottom: 0 }}>
+                              <XAxis dataKey="name" tick={{ fontSize: 10, fill: '#9ca3af' }} axisLine={false} tickLine={false} />
+                              <YAxis tickFormatter={fmtY} {...yProps} width={40} />
+                              <ReferenceLine y={0} stroke="#e5e7eb" />
+                              <Tooltip formatter={(v: number, name: string) => [fmtFull(v), name]} contentStyle={{ fontSize: 11, fontWeight: 'bold', borderRadius: 8, border: '1px solid #e5e7eb', boxShadow: '0 4px 12px rgba(0,0,0,0.08)' }} />
+                              <Bar dataKey="실적" fill={m.actualColor} radius={[3,3,0,0]} maxBarSize={44}>
+                                <LabelList dataKey="실적" position="top" formatter={fmtLabel} style={LBL} />
+                              </Bar>
+                              <Bar dataKey="목표" fill={m.budgetColor} radius={[3,3,0,0]} opacity={0.45} maxBarSize={44} />
+                            </BarChart>
+                          </ResponsiveContainer>
+                        )
+                      }
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        )}
 
       </div>
     </div>

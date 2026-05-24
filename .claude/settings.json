@@ -16,7 +16,19 @@
       "Bash(git -C \"f:\\\\One Drive\\\\OneDrive - SK Hynix Inc\\\\AI 작업폴더\\\\가계부 홈페이지 제작\" status)",
       "Bash(git -C \"f:\\\\One Drive\\\\OneDrive - SK Hynix Inc\\\\AI 작업폴더\\\\가계부 홈페이지 제작\" diff)",
       "Bash(git -C \"f:\\\\One Drive\\\\OneDrive - SK Hynix Inc\\\\AI 작업폴더\\\\가계부 홈페이지 제작\" add \"app/pension-charts/breakdown/page.tsx\" \".claude/settings.json\" \"Render_배포_가이드.txt\" \"서버_재시작.txt\")",
-      "Bash(git -C 'f:\\\\One Drive\\\\OneDrive - SK Hynix Inc\\\\AI 작업폴더\\\\가계부 홈페이지 제작' commit -m ' *)"
+      "Bash(git -C 'f:\\\\One Drive\\\\OneDrive - SK Hynix Inc\\\\AI 작업폴더\\\\가계부 홈페이지 제작' commit -m ' *)",
+      "Bash(git -C \"f:\\\\One Drive\\\\OneDrive - SK Hynix Inc\\\\AI 작업폴더\\\\가계부 홈페이지 제작\" push origin main)",
+      "Bash(git -C \"f:\\\\One Drive\\\\OneDrive - SK Hynix Inc\\\\AI 작업폴더\\\\가계부 홈페이지 제작\" log --all --oneline -- \"서버_재시작.txt\")",
+      "Bash(git -C \"f:\\\\One Drive\\\\OneDrive - SK Hynix Inc\\\\AI 작업폴더\\\\가계부 홈페이지 제작\" show 5a52f6b:\"서버_재시작.txt\")",
+      "Bash(git -C \"f:\\\\One Drive\\\\OneDrive - SK Hynix Inc\\\\AI 작업폴더\\\\가계부 홈페이지 제작\" add \"app/overview/page.tsx\")",
+      "Bash(git -C \"f:\\\\One Drive\\\\OneDrive - SK Hynix Inc\\\\AI 작업폴더\\\\가계부 홈페이지 제작\" remote get-url origin)",
+      "Bash(git -C \"f:\\\\One Drive\\\\OneDrive - SK Hynix Inc\\\\AI 작업폴더\\\\가계부 홈페이지 제작\" add \"app/analytics/page.tsx\")",
+      "Bash(git -C \"f:\\\\One Drive\\\\OneDrive - SK Hynix Inc\\\\AI 작업폴더\\\\가계부 홈페이지 제작\" add \"app/budget/page.tsx\" \"app/assets/page.tsx\")",
+      "Bash(sqlite3 gaegyebu.db \"SELECT DISTINCT fromAcct FROM 'Transaction' WHERE type='income' ORDER BY fromAcct;\")",
+      "Bash(where sqlite3 *)",
+      "Bash(Get-Content \"f:\\\\One Drive\\\\OneDrive - SK Hynix Inc\\\\AI 작업폴더\\\\가계부 홈페이지 제작\\\\prisma\\\\migrations\\\\20260507052839_init\\\\migration.sql\")",
+      "Bash(Remove-Item -Path \"f:\\\\One Drive\\\\OneDrive - SK Hynix Inc\\\\AI 작업폴더\\\\가계부 홈페이지 제작\\\\app\\\\api\\\\overview\\\\session-assets\\\\route.ts\" -Force)",
+      "Bash(Remove-Item -Path \"f:\\\\One Drive\\\\OneDrive - SK Hynix Inc\\\\AI 작업폴더\\\\가계부 홈페이지 제작\\\\app\\\\api\\\\overview\\\\session-assets\" -Force)"
     ],
     "additionalDirectories": [
       "f:\\One Drive\\OneDrive - SK Hynix Inc\\AI 작업폴더\\가계부 홈페이지 제작\\app\\api\\sessions"
