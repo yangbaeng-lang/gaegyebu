@@ -143,7 +143,14 @@ export default function OverviewPage() {
       .then(r => r.json())
       .then((d: SectionBudgetData) => {
         setSectionBudget(d)
-        if (d.periods.length > 0) setSelPeriod(d.periods[d.periods.length - 1].period)
+        if (d.periods.length > 0) {
+          const now = new Date()
+          const currentPeriod = m === 'yearly'
+            ? String(now.getFullYear())
+            : `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
+          const found = d.periods.find(p => p.period === currentPeriod)
+          setSelPeriod(found ? found.period : d.periods[d.periods.length - 1].period)
+        }
       })
   }
 

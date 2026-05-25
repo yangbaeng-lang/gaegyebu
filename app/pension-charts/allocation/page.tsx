@@ -18,6 +18,35 @@ type PensionItem = {
   비중: number | null
 }
 
+const EXCLUDED_GROUPS = ['퇴직금', '보험사연금']
+
+const CATEGORY_RULES: Array<{ keyword: string; category: string }> = [
+  { keyword: '다우존스', category: '다우존스' },
+  { keyword: '나스닥',   category: '나스닥'   },
+  { keyword: 'S&P500',  category: 'S&P500'  },
+  { keyword: 'TDF',     category: 'TDF'     },
+  { keyword: '금채권',   category: '금'       },
+  { keyword: '반도체',   category: '반도체'   },
+]
+
+const CATEGORY_ORDER = ['S&P500', '나스닥', '반도체', 'TDF', '다우존스', '금', '미분류']
+
+const CATEGORY_COLORS: Record<string, string> = {
+  'S&P500':  '#6b8cff',
+  '나스닥':  '#f59e0b',
+  'TDF':     '#10b981',
+  '다우존스': '#f97316',
+  '금':      '#eab308',
+  '반도체':  '#06b6d4',
+  '미분류':  '#9ca3af',
+}
+
+const ITEM_PALETTE = [
+  '#6b8cff', '#f59e0b', '#10b981', '#ef4444', '#8b5cf6',
+  '#06b6d4', '#f97316', '#84cc16', '#ec4899', '#14b8a6',
+  '#a78bfa', '#fb923c', '#4ade80', '#38bdf8', '#f43f5e',
+]
+
 const TOOLTIP_STYLE = {
   background: '#ffffff',
   border: '1px solid #e5e7eb',
@@ -29,16 +58,12 @@ const TOOLTIP_STYLE = {
   boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
 }
 
-const GROUP_PALETTE = [
-  '#6b8cff', '#f59e0b', '#10b981', '#ef4444',
-  '#8b5cf6', '#06b6d4', '#f97316', '#84cc16',
-]
-
-const ITEM_PALETTE = [
-  '#6b8cff', '#f59e0b', '#10b981', '#ef4444', '#8b5cf6',
-  '#06b6d4', '#f97316', '#84cc16', '#ec4899', '#14b8a6',
-  '#a78bfa', '#fb923c', '#4ade80', '#38bdf8', '#f43f5e',
-]
+function classifyAsset(name: string): string {
+  for (const { keyword, category } of CATEGORY_RULES) {
+    if (name.includes(keyword)) return category
+  }
+  return '미분류'
+}
 
 function rateBadge(v: number | null) {
   if (v === null) return 'bg-gray-100 text-gray-400'
@@ -46,13 +71,12 @@ function rateBadge(v: number | null) {
   return v > 0 ? 'bg-red-50 text-red-500' : 'bg-blue-50 text-blue-500'
 }
 
-export default function PensionBreakdownPage() {
+export default function PensionAllocationPage() {
   const today = new Date()
   const [selectedYear,  setSelectedYear]  = useState(today.getFullYear())
   const [selectedMonth, setSelectedMonth] = useState(today.getMonth() + 1)
   const [pensionSid,    setPensionSid]    = useState<number | null>(null)
   const [items,         setItems]         = useState<PensionItem[]>([])
-  const [groupOrder,    setGroupOrder]    = useState<string[]>([])
   const [loading,       setLoading]       = useState(false)
 
   useEffect(() => {
@@ -69,30 +93,40 @@ export default function PensionBreakdownPage() {
     const ym = `${selectedYear}-${String(selectedMonth).padStart(2, '0')}`
     fetch(`/api/pension-eval?sessionId=${pensionSid}&yearMonth=${ym}`)
       .then(r => r.json())
-      .then(d => { setItems(d.items ?? []); setGroupOrder(d.groupOrder ?? []) })
+      .then(d => setItems(d.items ?? []))
       .finally(() => setLoading(false))
   }, [pensionSid, selectedYear, selectedMonth])
 
-  const evalItems = items.filter(i => i.hasEval && i.평가액 > 0)
+  // 직접투자 연금 항목만 필터 (퇴직금·보험사연금 그룹 제외, 평가 데이터 있는 것만)
+  const directItems = items.filter(
+    i => !EXCLUDED_GROUPS.includes(i.group) && i.hasEval && i.평가액 > 0
+  )
 
-  const groupData = groupOrder.map((grp, idx) => {
-    const grpItems = evalItems.filter(i => i.group === grp).sort((a, b) => b.평가액 - a.평가액)
-    if (grpItems.length === 0) return null
-    const 평가액 = grpItems.reduce((s, i) => s + i.평가액, 0)
-    const 납입액 = grpItems.reduce((s, i) => s + i.납입액, 0)
+  // 카테고리별 그룹핑
+  const categoryData = CATEGORY_ORDER.map(cat => {
+    const catItems = directItems
+      .filter(i => classifyAsset(i.name) === cat)
+      .sort((a, b) => b.평가액 - a.평가액)
+    if (catItems.length === 0) return null
+    const 평가액 = catItems.reduce((s, i) => s + i.평가액, 0)
+    const 납입액 = catItems.reduce((s, i) => s + i.납입액, 0)
     return {
-      name: grp,
+      name: cat,
       value: 평가액,
       납입액,
       평가손익: 평가액 - 납입액,
       수익률: 납입액 > 0 ? ((평가액 - 납입액) / 납입액) * 100 : null,
-      color: GROUP_PALETTE[idx % GROUP_PALETTE.length],
-      items: grpItems,
+      color: CATEGORY_COLORS[cat] ?? '#9ca3af',
+      items: catItems,
     }
-  }).filter((g): g is NonNullable<typeof g> => g !== null)
-    .sort((a, b) => b.value - a.value)
+  }).filter((c): c is NonNullable<typeof c> => c !== null)
+    .sort((a, b) => {
+      if (a.name === '미분류') return 1
+      if (b.name === '미분류') return -1
+      return b.value - a.value
+    })
 
-  const total평가액 = groupData.reduce((s, g) => s + g.value, 0)
+  const total평가액 = categoryData.reduce((s, c) => s + c.value, 0)
 
   const yearOptions: number[] = []
   for (let y = today.getFullYear(); y >= 2020; y--) yearOptions.push(y)
@@ -103,8 +137,8 @@ export default function PensionBreakdownPage() {
       {/* 헤더 */}
       <div className="bg-white border-b border-gray-100 px-6 py-3 flex items-center gap-4 flex-shrink-0">
         <h1 className="text-base font-bold text-gray-800 flex items-center gap-2">
-          <i className="ti ti-chart-pie text-[#6b8cff]" />
-          세부내역 비율
+          <i className="ti ti-chart-donut text-[#6b8cff]" />
+          직접투자 비중
         </h1>
 
         <div className="flex items-center gap-2 ml-4">
@@ -136,25 +170,25 @@ export default function PensionBreakdownPage() {
             <i className="ti ti-pig-money text-3xl" />
             <p className="text-sm">"연금" 섹션이 없습니다</p>
           </div>
-        ) : groupData.length === 0 ? (
+        ) : categoryData.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-40 gap-2 text-gray-300">
-            <i className="ti ti-chart-pie text-3xl" />
+            <i className="ti ti-chart-donut text-3xl" />
             <p className="text-sm">{selectedYear}년 {selectedMonth}월 평가 데이터가 없습니다</p>
           </div>
         ) : (
           <div className="max-w-6xl mx-auto space-y-5">
 
-            {/* 전체 그룹 비율 도넛 차트 */}
+            {/* 전체 비율 도넛 차트 */}
             <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
               <div className="text-sm font-bold text-gray-800 mb-4 flex items-center gap-2">
                 <i className="ti ti-chart-donut text-[#6b8cff]" />
-                전체 그룹별 평가액 비율
+                직접투자 연금 자산군별 비중
               </div>
               <div className="flex flex-col md:flex-row items-center gap-4 md:gap-8">
                 <div className="flex-shrink-0">
                   <PieChart width={220} height={220}>
                     <Pie
-                      data={groupData}
+                      data={categoryData}
                       cx="50%"
                       cy="50%"
                       innerRadius={66}
@@ -163,8 +197,8 @@ export default function PensionBreakdownPage() {
                       nameKey="name"
                       paddingAngle={2}
                     >
-                      {groupData.map((g, i) => (
-                        <Cell key={i} fill={g.color} />
+                      {categoryData.map((c, i) => (
+                        <Cell key={i} fill={c.color} />
                       ))}
                     </Pie>
                     <RechartTooltip
@@ -176,66 +210,64 @@ export default function PensionBreakdownPage() {
 
                 {/* 범례 */}
                 <div className="w-full space-y-2.5 min-w-0">
-                  {groupData.map(g => {
-                    const pct = total평가액 > 0 ? (g.value / total평가액) * 100 : 0
+                  {categoryData.map(c => {
+                    const pct = total평가액 > 0 ? (c.value / total평가액) * 100 : 0
                     return (
-                      <div key={g.name} className="flex items-center gap-2 min-w-0">
-                        <span className="w-3 h-3 rounded-sm flex-shrink-0" style={{ backgroundColor: g.color }} />
-                        <span className="text-sm text-gray-700 flex-1 min-w-0 truncate">{g.name}</span>
+                      <div key={c.name} className="flex items-center gap-2 min-w-0">
+                        <span className="w-3 h-3 rounded-sm flex-shrink-0" style={{ backgroundColor: c.color }} />
+                        <span className="text-sm text-gray-700 flex-1 min-w-0 truncate">{c.name}</span>
                         <span className="text-sm font-bold text-gray-700 w-14 text-right flex-shrink-0">{pct.toFixed(1)}%</span>
-                        <span className="text-xs text-gray-400 w-24 text-right flex-shrink-0">{fmt(g.value)}</span>
-                        {g.수익률 !== null && (
-                          <span className={`text-xs font-bold px-2 py-0.5 rounded-md w-16 text-center flex-shrink-0 ${rateBadge(g.수익률)}`}>
-                            {g.수익률 >= 0 ? '+' : ''}{g.수익률.toFixed(2)}%
+                        <span className="text-xs text-gray-400 w-24 text-right flex-shrink-0">{fmt(c.value)}</span>
+                        {c.수익률 !== null && (
+                          <span className={`text-xs font-bold px-2 py-0.5 rounded-md w-16 text-center flex-shrink-0 ${rateBadge(c.수익률)}`}>
+                            {c.수익률 >= 0 ? '+' : ''}{c.수익률.toFixed(2)}%
                           </span>
                         )}
                       </div>
                     )
                   })}
                   <div className="border-t border-gray-100 pt-2.5 flex items-center justify-between">
-                    <span className="text-xs text-gray-400">전체 합계</span>
+                    <span className="text-xs text-gray-400">직접투자 합계</span>
                     <span className="text-sm font-bold text-gray-800">{fmt(total평가액)}</span>
                   </div>
                 </div>
               </div>
             </div>
 
-            {/* 그룹별 세부내역 파이 차트 */}
+            {/* 자산군별 세부 카드 */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-              {groupData.map(g => {
-                const grpTotal = g.value
+              {categoryData.map(c => {
+                const catTotal = c.value
                 return (
-                  <div key={g.name} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
-                    {/* 그룹 헤더 */}
+                  <div key={c.name} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
                     <div className="flex items-center justify-between mb-3">
                       <span className="text-sm font-bold text-gray-800 flex items-center gap-2">
-                        <span className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: g.color }} />
-                        {g.name}
+                        <span className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: c.color }} />
+                        {c.name}
                       </span>
                       <div className="flex items-center gap-2">
-                        {g.수익률 !== null && (
-                          <span className={`text-xs font-bold px-2 py-0.5 rounded-md ${rateBadge(g.수익률)}`}>
-                            {g.수익률 >= 0 ? '+' : ''}{g.수익률.toFixed(2)}%
+                        {c.수익률 !== null && (
+                          <span className={`text-xs font-bold px-2 py-0.5 rounded-md ${rateBadge(c.수익률)}`}>
+                            {c.수익률 >= 0 ? '+' : ''}{c.수익률.toFixed(2)}%
                           </span>
                         )}
-                        <span className="text-xs text-gray-400">{fmt(g.value)}</span>
+                        <span className="text-xs text-gray-400">{fmt(c.value)}</span>
                       </div>
                     </div>
 
                     <div className="flex items-center gap-4">
-                      {/* 세부 파이 차트 */}
                       <PieChart width={160} height={160} style={{ flexShrink: 0 }}>
                         <Pie
-                          data={g.items}
+                          data={c.items}
                           cx="50%"
                           cy="50%"
                           innerRadius={42}
                           outerRadius={72}
                           dataKey="평가액"
                           nameKey="name"
-                          paddingAngle={g.items.length > 1 ? 2 : 0}
+                          paddingAngle={c.items.length > 1 ? 2 : 0}
                         >
-                          {g.items.map((_item, i) => (
+                          {c.items.map((_item, i) => (
                             <Cell key={i} fill={ITEM_PALETTE[i % ITEM_PALETTE.length]} />
                           ))}
                         </Pie>
@@ -245,10 +277,10 @@ export default function PensionBreakdownPage() {
                         />
                       </PieChart>
 
-                      {/* 세부 아이템 목록 */}
                       <div className="flex-1 space-y-2">
-                        {g.items.map((item, i) => {
-                          const pct = grpTotal > 0 ? (item.평가액 / grpTotal) * 100 : 0
+                        {c.items.map((item, i) => {
+                          const pct = catTotal > 0 ? (item.평가액 / catTotal) * 100 : 0
+                          const totalPct = total평가액 > 0 ? (item.평가액 / total평가액) * 100 : 0
                           return (
                             <div key={item.name} className="flex items-center gap-2">
                               <span
@@ -257,15 +289,16 @@ export default function PensionBreakdownPage() {
                               />
                               <span className="text-xs text-gray-600 flex-1 truncate" title={item.name}>{item.name}</span>
                               <span className="text-xs text-gray-500 w-20 text-right flex-shrink-0">{fmt(item.평가액)}</span>
-                              <span className="text-xs font-semibold text-gray-600 w-10 text-right flex-shrink-0">{pct.toFixed(1)}%</span>
-                              {item.수익률 !== null && (
-                                <span className={`text-[10px] font-semibold w-14 text-right flex-shrink-0 ${item.수익률 > 0 ? 'text-red-400' : item.수익률 < 0 ? 'text-blue-400' : 'text-gray-400'}`}>
-                                  {item.수익률 >= 0 ? '+' : ''}{item.수익률.toFixed(1)}%
-                                </span>
-                              )}
+                              <span className="text-xs text-gray-400 w-10 text-right flex-shrink-0">{pct.toFixed(1)}%</span>
+                              <span className="text-xs font-semibold text-gray-600 w-10 text-right flex-shrink-0">{totalPct.toFixed(1)}%</span>
                             </div>
                           )
                         })}
+                        {c.items.length > 1 && (
+                          <div className="pt-1 border-t border-gray-100 flex items-center justify-between">
+                            <span className="text-[10px] text-gray-300">금액 / 군내비중 / 전체비중</span>
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>

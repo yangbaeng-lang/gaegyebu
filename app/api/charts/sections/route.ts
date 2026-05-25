@@ -7,22 +7,29 @@ export async function GET(req: NextRequest) {
   const sessions = await prisma.session.findMany({ orderBy: { sortOrder: 'asc' } })
 
   const sectionsData = await Promise.all(sessions.map(async (session) => {
-    const [txs, incomeBudgets, expBudgets] = await Promise.all([
+    const [txs, incomeBudgets, expBudgets, incomeCats, expenseCats] = await Promise.all([
       prisma.transaction.findMany({ where: { sessionId: session.id }, orderBy: { date: 'asc' } }),
       prisma.budget.findMany({ where: { sessionId: session.id, category: { startsWith: 'income:' } } }),
       prisma.budget.findMany({ where: { sessionId: session.id, category: { not: { startsWith: 'income:' } } } }),
+      prisma.category.findMany({ where: { sessionId: session.id, type: 'income' }, select: { name: true } }),
+      prisma.category.findMany({ where: { sessionId: session.id, type: 'expense' }, select: { name: true } }),
     ])
+
+    const incomeCatSet  = new Set(incomeCats.map(c => c.name))
+    const expenseCatSet = new Set(expenseCats.map(c => c.name))
+    const validIncomeBudgets = incomeBudgets.filter(b => incomeCatSet.has(b.category.slice('income:'.length)))
+    const validExpBudgets    = expBudgets.filter(b => expenseCatSet.has(b.category))
 
     const getPeriod = (date: string) => mode === 'monthly' ? date.slice(0, 7) : date.slice(0, 4)
 
     const incomeBudgetMap: Record<string, number> = {}
-    for (const b of incomeBudgets) {
+    for (const b of validIncomeBudgets) {
       const p = mode === 'monthly' ? b.yearMonth : b.yearMonth.slice(0, 4)
       incomeBudgetMap[p] = (incomeBudgetMap[p] ?? 0) + b.amount
     }
 
     const expenseBudgetMap: Record<string, number> = {}
-    for (const b of expBudgets) {
+    for (const b of validExpBudgets) {
       const p = mode === 'monthly' ? b.yearMonth : b.yearMonth.slice(0, 4)
       expenseBudgetMap[p] = (expenseBudgetMap[p] ?? 0) + b.amount
     }

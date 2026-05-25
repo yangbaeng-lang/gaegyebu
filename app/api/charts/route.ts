@@ -6,13 +6,19 @@ export async function GET(req: NextRequest) {
   const mode = req.nextUrl.searchParams.get('mode') ?? 'monthly'
   const sid  = getSid(req)
 
-  const [txs, cats, groupAnchors, budgets, expBudgets] = await Promise.all([
+  const [txs, cats, groupAnchors, budgets, expBudgets, incomeCats] = await Promise.all([
     prisma.transaction.findMany({ where: { sessionId: sid }, orderBy: { date: 'asc' } }),
     prisma.category.findMany({ where: { sessionId: sid, type: 'expense', name: { not: '__group__' } } }),
     prisma.category.findMany({ where: { sessionId: sid, type: 'expense', name: '__group__' }, orderBy: { sortOrder: 'asc' } }),
     prisma.budget.findMany({ where: { sessionId: sid, category: { startsWith: 'income:' } } }),
     prisma.budget.findMany({ where: { sessionId: sid, category: { not: { startsWith: 'income:' } } } }),
+    prisma.category.findMany({ where: { sessionId: sid, type: 'income' }, select: { name: true } }),
   ])
+
+  const incomeCatSet  = new Set(incomeCats.map(c => c.name))
+  const expenseCatSet = new Set(cats.map(c => c.name))
+  const validBudgets    = budgets.filter(b => incomeCatSet.has(b.category.slice('income:'.length)))
+  const validExpBudgets = expBudgets.filter(b => expenseCatSet.has(b.category))
 
   const expenseGroups = groupAnchors.map(g => g.group).filter(Boolean) as string[]
   const catGroupMap: Record<string, string> = {}
@@ -22,13 +28,13 @@ export async function GET(req: NextRequest) {
   const getLabel  = (p: string)    => mode === 'monthly' ? p.slice(2).replace('-', '/') : `${p}년`
 
   const incomeBudgetMap: Record<string, number> = {}
-  for (const b of budgets) {
+  for (const b of validBudgets) {
     const period = mode === 'monthly' ? b.yearMonth : b.yearMonth.slice(0, 4)
     incomeBudgetMap[period] = (incomeBudgetMap[period] ?? 0) + b.amount
   }
 
   const expenseBudgetMap: Record<string, number> = {}
-  for (const b of expBudgets) {
+  for (const b of validExpBudgets) {
     const period = mode === 'monthly' ? b.yearMonth : b.yearMonth.slice(0, 4)
     expenseBudgetMap[period] = (expenseBudgetMap[period] ?? 0) + b.amount
   }
