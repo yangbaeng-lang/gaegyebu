@@ -1,51 +1,68 @@
 import { NextRequest, NextResponse } from 'next/server'
 import prisma from '@/lib/db'
 
+type SummaryRow = {
+  sessionId: bigint | number
+  totalAssets: string | number
+  totalLiab: string | number
+}
+
 export async function GET(req: NextRequest) {
   const toParam  = req.nextUrl.searchParams.get('to')
   const replayTo = toParam ?? new Date().toISOString().slice(0, 10)
 
-  const sessions = await prisma.session.findMany({ orderBy: [{ sortOrder: 'asc' }, { id: 'asc' }] })
+  const [sessions, rows] = await Promise.all([
+    prisma.session.findMany({ orderBy: [{ sortOrder: 'asc' }, { id: 'asc' }] }),
+    prisma.$queryRaw<SummaryRow[]>`
+      WITH deltas AS (
+        SELECT "sessionId", "toAcct"   AS acct,  amount AS delta FROM "Transaction" WHERE type = 'income'   AND date <= ${replayTo}
+        UNION ALL
+        SELECT "sessionId", "fromAcct" AS acct, -amount AS delta FROM "Transaction" WHERE type = 'expense'  AND date <= ${replayTo}
+        UNION ALL
+        SELECT "sessionId", "fromAcct" AS acct, -amount AS delta FROM "Transaction" WHERE type = 'transfer' AND date <= ${replayTo}
+        UNION ALL
+        SELECT "sessionId", "toAcct"   AS acct,  amount AS delta FROM "Transaction" WHERE type = 'transfer' AND date <= ${replayTo}
+      ),
+      account_sums AS (
+        SELECT "sessionId", acct, SUM(delta) AS net
+        FROM deltas GROUP BY "sessionId", acct
+      ),
+      enriched AS (
+        SELECT
+          a."sessionId",
+          a.kind,
+          CASE WHEN a.kind = 'liability' THEN -s.net ELSE s.net END AS actual
+        FROM account_sums s
+        JOIN "Asset" a ON s.acct = a.type AND s."sessionId" = a."sessionId"
+      )
+      SELECT
+        "sessionId",
+        COALESCE(SUM(CASE WHEN kind = 'asset'     THEN actual      ELSE 0 END), 0) AS "totalAssets",
+        COALESCE(SUM(CASE WHEN kind = 'liability' THEN ABS(actual) ELSE 0 END), 0) AS "totalLiab"
+      FROM enriched
+      GROUP BY "sessionId"
+    `,
+  ])
 
-  const results = await Promise.all(
-    sessions.map(async (s) => {
-      const [assets, txs] = await Promise.all([
-        prisma.asset.findMany({ where: { sessionId: s.id } }),
-        prisma.transaction.findMany({ where: { sessionId: s.id, date: { lte: replayTo } }, orderBy: { date: 'asc' } }),
-      ])
-
-      const kindMap: Record<string, string> = {}
-      assets.forEach(a => { kindMap[a.type] = a.kind })
-
-      // 거래 내역 전체 누적 합산 (자산 페이지와 동일한 방식)
-      const amounts: Record<string, number> = {}
-      const applyDelta = (acct: string, delta: number) => {
-        const kind = kindMap[acct]
-        if (!kind) return
-        const actual = kind === 'liability' ? -delta : delta
-        amounts[acct] = (amounts[acct] ?? 0) + actual
-      }
-
-      for (const tx of txs) {
-        if (tx.type === 'income')   { applyDelta(tx.toAcct,   tx.amount) }
-        if (tx.type === 'expense')  { applyDelta(tx.fromAcct, -tx.amount) }
-        if (tx.type === 'transfer') { applyDelta(tx.fromAcct, -tx.amount); applyDelta(tx.toAcct, tx.amount) }
-      }
-
-      const totalAssets = assets.filter(a => a.kind === 'asset')    .reduce((sum, a) => sum + (amounts[a.type] ?? 0), 0)
-      const totalLiab   = assets.filter(a => a.kind === 'liability') .reduce((sum, a) => sum + Math.abs(amounts[a.type] ?? 0), 0)
-
-      return {
-        id:            s.id,
-        name:          s.name,
-        createdAt:     s.createdAt,
-        decimalPlaces: s.decimalPlaces,
-        totalAssets,
-        totalLiab,
-        netWorth:      totalAssets - totalLiab,
-      }
-    })
+  const summaryMap = new Map<number, { totalAssets: number; totalLiab: number }>(
+    rows.map(r => [
+      Number(r.sessionId),
+      { totalAssets: Number(r.totalAssets), totalLiab: Number(r.totalLiab) },
+    ])
   )
+
+  const results = sessions.map(s => {
+    const sums = summaryMap.get(s.id) ?? { totalAssets: 0, totalLiab: 0 }
+    return {
+      id:            s.id,
+      name:          s.name,
+      createdAt:     s.createdAt,
+      decimalPlaces: s.decimalPlaces,
+      totalAssets:   sums.totalAssets,
+      totalLiab:     sums.totalLiab,
+      netWorth:      sums.totalAssets - sums.totalLiab,
+    }
+  })
 
   return NextResponse.json(results, {
     headers: { 'Cache-Control': 'private, max-age=5, stale-while-revalidate=10', 'Vary': 'Cookie' },

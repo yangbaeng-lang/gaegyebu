@@ -117,14 +117,15 @@ function ModeToggle({ mode, onChange }: { mode: 'monthly'|'yearly'; onChange: (m
 }
 
 export default function OverviewPage() {
-  const [allSessions,   setAllSessions]   = useState<SessionItem[]>([])
-  const [selected,      setSelected]      = useState<Set<number>>(new Set())
-  const [summary,       setSummary]       = useState<SectionSummary[]>([])
-  const [series,        setSeries]        = useState<SeriesItem[]>([])
-  const [mode,          setMode]          = useState<'monthly'|'yearly'>('monthly')
-  const [loading,       setLoading]       = useState(true)
-  const [profitVisible, setProfitVisible] = useState<Set<string>>(new Set(['profit']))
-  const [assetVisible,  setAssetVisible]  = useState<Set<string>>(new Set(['netWorth']))
+  const [allSessions,    setAllSessions]    = useState<SessionItem[]>([])
+  const [selected,       setSelected]       = useState<Set<number>>(new Set())
+  const [summary,        setSummary]        = useState<SectionSummary[]>([])
+  const [series,         setSeries]         = useState<SeriesItem[]>([])
+  const [mode,           setMode]           = useState<'monthly'|'yearly'>('monthly')
+  const [summaryLoading, setSummaryLoading] = useState(true)
+  const [seriesLoading,  setSeriesLoading]  = useState(true)
+  const [profitVisible,  setProfitVisible]  = useState<Set<string>>(new Set(['profit']))
+  const [assetVisible,   setAssetVisible]   = useState<Set<string>>(new Set(['netWorth']))
   const [cumulData,     setCumulData]     = useState<{ sessions: SessionItem[]; series: Record<string, string|number>[] }>({ sessions: [], series: [] })
   const [cumulLoading,  setCumulLoading]  = useState(false)
   const [cumulVisible,  setCumulVisible]  = useState<Set<number>>(new Set())
@@ -133,9 +134,11 @@ export default function OverviewPage() {
   const [selPeriod,     setSelPeriod]     = useState('')
 
   const fetchSeries = (m: string, ids: Set<number>) => {
-    if (ids.size === 0) { setSeries([]); return Promise.resolve() }
+    if (ids.size === 0) { setSeries([]); setSeriesLoading(false); return Promise.resolve() }
+    setSeriesLoading(true)
     return fetch(`/api/overview/charts?mode=${m}&include=${Array.from(ids).join(',')}`)
       .then(r => r.json()).then((d: { series: SeriesItem[] }) => setSeries(d.series))
+      .finally(() => setSeriesLoading(false))
   }
 
   const fetchSectionBudget = (m: string) => {
@@ -167,7 +170,9 @@ export default function OverviewPage() {
   }
 
   useEffect(() => {
-    setLoading(true)
+    // sectionBudget은 세션 ID 불필요 → 즉시 병렬 시작
+    fetchSectionBudget(mode)
+
     Promise.all([
       fetch('/api/sessions').then(r => r.json()),
       fetch('/api/sessions/summary').then(r => r.json()),
@@ -178,8 +183,9 @@ export default function OverviewPage() {
       const EXCLUDED = ['병훈급여','아름급여']
       const ids = new Set(sessions.filter(s => !EXCLUDED.includes(s.name)).map(s => s.id))
       setSelected(ids)
-      return Promise.all([fetchSeries(mode, ids), fetchCumul(mode, ids), fetchSectionBudget(mode)])
-    }).finally(() => setLoading(false))
+      setSummaryLoading(false)
+      return Promise.all([fetchSeries(mode, ids), fetchCumul(mode, ids)])
+    }).catch(() => setSummaryLoading(false))
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
@@ -202,7 +208,7 @@ export default function OverviewPage() {
   const totalLiab   = filteredSummary.reduce((s, d) => s + d.totalLiab,   0)
   const totalNet    = filteredSummary.reduce((s, d) => s + d.netWorth,     0)
 
-  if (loading) return (
+  if (summaryLoading) return (
     <div className="flex-1 flex items-center justify-center text-gray-400 text-sm">불러오는 중…</div>
   )
 
@@ -301,37 +307,39 @@ export default function OverviewPage() {
               })}
             </div>
             <div className="flex-1 min-h-0">
-              {series.length === 0
-                ? <div className="h-full flex items-center justify-center text-gray-300 text-sm">데이터 없음</div>
-                : (() => {
-                  const cd = series.map((item, i) => {
-                    const prev = series[i-1]?.profit
-                    return { ...item, 증감율: (prev != null && prev !== 0) ? parseFloat(((item.profit - prev) / Math.abs(prev) * 100).toFixed(1)) : null }
-                  })
-                  return (
-                    <ScrollChart data={cd}>
-                      {(w, h) => (
-                        <ComposedChart data={cd} width={w} height={h} margin={{ top: 24, right: 8, left: 0, bottom: 4 }} barCategoryGap="32%" barGap={2}>
-                          <XAxis dataKey="label" {...xProps} />
-                          <YAxis yAxisId="amt" tickFormatter={fmtY} {...yProps} />
-                          <YAxis yAxisId="pct" orientation="right" hide width={0} />
-                          <Tooltip content={<CustomTooltip />} cursor={{ fill: '#f3f4f6' }} />
-                          <Legend iconType="square" iconSize={10} wrapperStyle={{ fontSize: 11, paddingTop: 8 }} />
-                          <ReferenceLine yAxisId="amt" y={0} stroke="#e5e7eb" />
-                          {profitVisible.has('income')  && <Bar yAxisId="amt" dataKey="income"  name="수입"   fill={C.income}    radius={[3,3,0,0]} maxBarSize={30}><LabelList dataKey="income"  position="top" formatter={fmtLabel} style={LBL} /></Bar>}
-                          {profitVisible.has('expense') && <Bar yAxisId="amt" dataKey="expense" name="지출"   fill={C.expense}   radius={[3,3,0,0]} maxBarSize={30}><LabelList dataKey="expense" position="top" formatter={fmtLabel} style={LBL} /></Bar>}
-                          {profitVisible.has('profit')  && (
-                            <Bar yAxisId="amt" dataKey="profit" name="순수익" fill={C.profitPos} radius={[3,3,0,0]} maxBarSize={30}>
-                              {cd.map((d, i) => <Cell key={i} fill={d.profit >= 0 ? C.profitPos : C.profitNeg} />)}
-                              <LabelList dataKey="profit" position="top" formatter={fmtLabel} style={LBL} />
-                            </Bar>
-                          )}
-                          <Line yAxisId="pct" dataKey="증감율" name="증감율" type="monotone" stroke={C.rate} strokeWidth={2} dot={{ r: 2, fill: C.rate, strokeWidth: 0 }} activeDot={{ r: 4 }} connectNulls={false} />
-                        </ComposedChart>
-                      )}
-                    </ScrollChart>
-                  )
-                })()}
+              {seriesLoading
+                ? <div className="h-full flex items-center justify-center text-gray-300 text-sm">불러오는 중…</div>
+                : series.length === 0
+                  ? <div className="h-full flex items-center justify-center text-gray-300 text-sm">데이터 없음</div>
+                  : (() => {
+                    const cd = series.map((item, i) => {
+                      const prev = series[i-1]?.profit
+                      return { ...item, 증감율: (prev != null && prev !== 0) ? parseFloat(((item.profit - prev) / Math.abs(prev) * 100).toFixed(1)) : null }
+                    })
+                    return (
+                      <ScrollChart data={cd}>
+                        {(w, h) => (
+                          <ComposedChart data={cd} width={w} height={h} margin={{ top: 24, right: 8, left: 0, bottom: 4 }} barCategoryGap="32%" barGap={2}>
+                            <XAxis dataKey="label" {...xProps} />
+                            <YAxis yAxisId="amt" tickFormatter={fmtY} {...yProps} />
+                            <YAxis yAxisId="pct" orientation="right" hide width={0} />
+                            <Tooltip content={<CustomTooltip />} cursor={{ fill: '#f3f4f6' }} />
+                            <Legend iconType="square" iconSize={10} wrapperStyle={{ fontSize: 11, paddingTop: 8 }} />
+                            <ReferenceLine yAxisId="amt" y={0} stroke="#e5e7eb" />
+                            {profitVisible.has('income')  && <Bar yAxisId="amt" dataKey="income"  name="수입"   fill={C.income}    radius={[3,3,0,0]} maxBarSize={30}><LabelList dataKey="income"  position="top" formatter={fmtLabel} style={LBL} /></Bar>}
+                            {profitVisible.has('expense') && <Bar yAxisId="amt" dataKey="expense" name="지출"   fill={C.expense}   radius={[3,3,0,0]} maxBarSize={30}><LabelList dataKey="expense" position="top" formatter={fmtLabel} style={LBL} /></Bar>}
+                            {profitVisible.has('profit')  && (
+                              <Bar yAxisId="amt" dataKey="profit" name="순수익" fill={C.profitPos} radius={[3,3,0,0]} maxBarSize={30}>
+                                {cd.map((d, i) => <Cell key={i} fill={d.profit >= 0 ? C.profitPos : C.profitNeg} />)}
+                                <LabelList dataKey="profit" position="top" formatter={fmtLabel} style={LBL} />
+                              </Bar>
+                            )}
+                            <Line yAxisId="pct" dataKey="증감율" name="증감율" type="monotone" stroke={C.rate} strokeWidth={2} dot={{ r: 2, fill: C.rate, strokeWidth: 0 }} activeDot={{ r: 4 }} connectNulls={false} />
+                          </ComposedChart>
+                        )}
+                      </ScrollChart>
+                    )
+                  })()}
             </div>
           </div>
 
@@ -354,37 +362,39 @@ export default function OverviewPage() {
               })}
             </div>
             <div className="flex-1 min-h-0">
-              {series.length === 0
-                ? <div className="h-full flex items-center justify-center text-gray-300 text-sm">데이터 없음</div>
-                : (() => {
-                  const cd = series.map((item, i) => {
-                    const prev = series[i-1]?.netWorth
-                    return { ...item, 증감율: (prev != null && prev !== 0) ? parseFloat(((item.netWorth - prev) / Math.abs(prev) * 100).toFixed(1)) : null }
-                  })
-                  return (
-                    <ScrollChart data={cd}>
-                      {(w, h) => (
-                        <ComposedChart data={cd} width={w} height={h} margin={{ top: 24, right: 8, left: 0, bottom: 4 }} barCategoryGap="32%" barGap={2}>
-                          <XAxis dataKey="label" {...xProps} />
-                          <YAxis yAxisId="amt" tickFormatter={fmtY} {...yProps} />
-                          <YAxis yAxisId="pct" orientation="right" width={0} tick={false} axisLine={false} tickLine={false} />
-                          <Tooltip content={<CustomTooltip />} cursor={{ fill: '#f3f4f6' }} />
-                          <Legend iconType="square" iconSize={10} wrapperStyle={{ fontSize: 11, paddingTop: 8 }} />
-                          <ReferenceLine yAxisId="amt" y={0} stroke="#e5e7eb" />
-                          {assetVisible.has('totalAssets') && <Bar yAxisId="amt" dataKey="totalAssets" name="자산"   fill={C.asset}  radius={[3,3,0,0]} maxBarSize={30}><LabelList dataKey="totalAssets" position="top" formatter={fmtLabel} style={LBL} /></Bar>}
-                          {assetVisible.has('totalLiab')   && <Bar yAxisId="amt" dataKey="totalLiab"   name="부채"   fill={C.liab}   radius={[3,3,0,0]} maxBarSize={30}><LabelList dataKey="totalLiab"   position="top" formatter={fmtLabel} style={LBL} /></Bar>}
-                          {assetVisible.has('netWorth')    && (
-                            <Bar yAxisId="amt" dataKey="netWorth" name="순자산" fill={C.netPos} radius={[3,3,0,0]} maxBarSize={30}>
-                              {cd.map((d, i) => <Cell key={i} fill={d.netWorth >= 0 ? C.netPos : C.netNeg} />)}
-                              <LabelList dataKey="netWorth" position="top" formatter={fmtLabel} style={LBL} />
-                            </Bar>
-                          )}
-                          <Line yAxisId="pct" dataKey="증감율" name="증감율" type="monotone" stroke={C.rate} strokeWidth={2} dot={{ r: 2, fill: C.rate, strokeWidth: 0 }} activeDot={{ r: 4 }} connectNulls={false} />
-                        </ComposedChart>
-                      )}
-                    </ScrollChart>
-                  )
-                })()}
+              {seriesLoading
+                ? <div className="h-full flex items-center justify-center text-gray-300 text-sm">불러오는 중…</div>
+                : series.length === 0
+                  ? <div className="h-full flex items-center justify-center text-gray-300 text-sm">데이터 없음</div>
+                  : (() => {
+                    const cd = series.map((item, i) => {
+                      const prev = series[i-1]?.netWorth
+                      return { ...item, 증감율: (prev != null && prev !== 0) ? parseFloat(((item.netWorth - prev) / Math.abs(prev) * 100).toFixed(1)) : null }
+                    })
+                    return (
+                      <ScrollChart data={cd}>
+                        {(w, h) => (
+                          <ComposedChart data={cd} width={w} height={h} margin={{ top: 24, right: 8, left: 0, bottom: 4 }} barCategoryGap="32%" barGap={2}>
+                            <XAxis dataKey="label" {...xProps} />
+                            <YAxis yAxisId="amt" tickFormatter={fmtY} {...yProps} />
+                            <YAxis yAxisId="pct" orientation="right" width={0} tick={false} axisLine={false} tickLine={false} />
+                            <Tooltip content={<CustomTooltip />} cursor={{ fill: '#f3f4f6' }} />
+                            <Legend iconType="square" iconSize={10} wrapperStyle={{ fontSize: 11, paddingTop: 8 }} />
+                            <ReferenceLine yAxisId="amt" y={0} stroke="#e5e7eb" />
+                            {assetVisible.has('totalAssets') && <Bar yAxisId="amt" dataKey="totalAssets" name="자산"   fill={C.asset}  radius={[3,3,0,0]} maxBarSize={30}><LabelList dataKey="totalAssets" position="top" formatter={fmtLabel} style={LBL} /></Bar>}
+                            {assetVisible.has('totalLiab')   && <Bar yAxisId="amt" dataKey="totalLiab"   name="부채"   fill={C.liab}   radius={[3,3,0,0]} maxBarSize={30}><LabelList dataKey="totalLiab"   position="top" formatter={fmtLabel} style={LBL} /></Bar>}
+                            {assetVisible.has('netWorth')    && (
+                              <Bar yAxisId="amt" dataKey="netWorth" name="순자산" fill={C.netPos} radius={[3,3,0,0]} maxBarSize={30}>
+                                {cd.map((d, i) => <Cell key={i} fill={d.netWorth >= 0 ? C.netPos : C.netNeg} />)}
+                                <LabelList dataKey="netWorth" position="top" formatter={fmtLabel} style={LBL} />
+                              </Bar>
+                            )}
+                            <Line yAxisId="pct" dataKey="증감율" name="증감율" type="monotone" stroke={C.rate} strokeWidth={2} dot={{ r: 2, fill: C.rate, strokeWidth: 0 }} activeDot={{ r: 4 }} connectNulls={false} />
+                          </ComposedChart>
+                        )}
+                      </ScrollChart>
+                    )
+                  })()}
             </div>
           </div>
         </div>
