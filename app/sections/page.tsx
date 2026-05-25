@@ -10,6 +10,8 @@ type SectionSummary = {
   name: string
   createdAt: string
   decimalPlaces: number
+  currency: string
+  exchangeRate: number | null
   totalAssets: number
   totalLiab: number
   netWorth: number
@@ -17,6 +19,21 @@ type SectionSummary = {
 
 const fmt = (n: number) =>
   (n < 0 ? '-' : '') + Math.abs(n).toLocaleString() + '원'
+
+const fmtUSD = (n: number) =>
+  (n < 0 ? '-$' : '$') + Math.abs(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+
+const fmtAmount = (n: number, s: Pick<SectionSummary, 'currency' | 'exchangeRate'>) => {
+  if (s.currency === 'USD') {
+    const usd = fmtUSD(n)
+    if (s.exchangeRate) {
+      const krw = Math.round(Math.abs(n) * s.exchangeRate).toLocaleString()
+      return { usd, krw: (n < 0 ? '-' : '') + krw + '원' }
+    }
+    return { usd, krw: null }
+  }
+  return { usd: null, krw: fmt(n) }
+}
 
 export default function SectionsPage() {
   const { refreshDecimalPlaces } = useSession()
@@ -26,10 +43,12 @@ export default function SectionsPage() {
   const [currentSid,  setCurrentSid]  = useState(1)
   const [dragIndex,     setDragIndex]     = useState<number | null>(null)
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null)
-  const [showModal,   setShowModal]   = useState(false)
-  const [newName,     setNewName]     = useState('')
-  const [createMode,  setCreateMode]  = useState<'copy' | 'fresh'>('fresh')
-  const [creating,    setCreating]    = useState(false)
+  const [showModal,       setShowModal]       = useState(false)
+  const [newName,         setNewName]         = useState('')
+  const [createMode,      setCreateMode]      = useState<'copy' | 'fresh'>('fresh')
+  const [newCurrency,     setNewCurrency]     = useState<'KRW' | 'USD'>('KRW')
+  const [newExchangeRate, setNewExchangeRate] = useState('')
+  const [creating,        setCreating]        = useState(false)
   const [importResult, setImportResult] = useState<{ imported: number; skipped: number; duplicates?: number; error?: string } | null>(null)
   const [importing,    setImporting]    = useState(false)
   const [pendingFiles, setPendingFiles] = useState<File[] | null>(null)
@@ -41,7 +60,7 @@ export default function SectionsPage() {
   const [pendingRawFiles, setPendingRawFiles] = useState<File[] | null>(null)
   const [importTargetSid, setImportTargetSid] = useState<number | null>(null)
   const [selectedImportSid, setSelectedImportSid] = useState<number | null>(null)
-  const [settingsModal, setSettingsModal] = useState<{ id: number; name: string; decimalPlaces: number } | null>(null)
+  const [settingsModal, setSettingsModal] = useState<{ id: number; name: string; decimalPlaces: number; currency: string; exchangeRate: number | null } | null>(null)
 
   const fetchData = (dateTo: string) =>
     Promise.all([
@@ -178,7 +197,12 @@ export default function SectionsPage() {
       const res = await fetch('/api/sessions', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: newName.trim(), mode: createMode }),
+        body: JSON.stringify({
+          name: newName.trim(),
+          mode: createMode,
+          currency: newCurrency,
+          exchangeRate: newCurrency === 'USD' ? (Number(newExchangeRate) || null) : null,
+        }),
       })
       const newSession = await res.json()
       if (!res.ok) {
@@ -196,19 +220,28 @@ export default function SectionsPage() {
 
   const saveSettings = async () => {
     if (!settingsModal) return
-    await fetch(`/api/sessions/${settingsModal.id}`, {
+    const saved = { ...settingsModal }
+    await fetch(`/api/sessions/${saved.id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ decimalPlaces: settingsModal.decimalPlaces }),
+      body: JSON.stringify({
+        decimalPlaces: saved.decimalPlaces,
+        currency: saved.currency,
+        exchangeRate: saved.exchangeRate,
+      }),
     })
     setSettingsModal(null)
-    fetchData(period.dateTo)
-    if (settingsModal.id === currentSid) refreshDecimalPlaces()
+    setSections(prev => prev.map(s => s.id === saved.id
+      ? { ...s, decimalPlaces: saved.decimalPlaces, currency: saved.currency, exchangeRate: saved.exchangeRate }
+      : s
+    ))
+    if (saved.id === currentSid) refreshDecimalPlaces()
   }
 
-  const totalAssets = sections.reduce((s, r) => s + r.totalAssets, 0)
-  const totalLiab   = sections.reduce((s, r) => s + r.totalLiab,   0)
-  const totalNet    = sections.reduce((s, r) => s + r.netWorth,    0)
+  const toKRW = (s: SectionSummary) => s.currency === 'USD' ? (s.exchangeRate ?? 0) : 1
+  const totalAssets = sections.reduce((acc, s) => acc + s.totalAssets * toKRW(s), 0)
+  const totalLiab   = sections.reduce((acc, s) => acc + s.totalLiab   * toKRW(s), 0)
+  const totalNet    = sections.reduce((acc, s) => acc + s.netWorth     * toKRW(s), 0)
 
   return (
     <div className="flex flex-col h-full">
@@ -306,25 +339,45 @@ export default function SectionsPage() {
                       {s.id === currentSid && (
                         <span className="w-1.5 h-1.5 rounded-full bg-[#6b8cff] flex-shrink-0" />
                       )}
-                      <div className={s.id !== currentSid ? '' : ''}>
-                        <p className={`text-[15px] font-semibold ${s.id === currentSid ? 'text-[#6b8cff]' : 'text-gray-800 group-hover:text-gray-900'}`}>
-                          {s.name}
-                        </p>
+                      <div>
+                        <div className="flex items-center gap-1.5">
+                          <p className={`text-[15px] font-semibold ${s.id === currentSid ? 'text-[#6b8cff]' : 'text-gray-800 group-hover:text-gray-900'}`}>
+                            {s.name}
+                          </p>
+                          {s.currency === 'USD' && (
+                            <span className="text-[10px] font-bold text-white bg-[#6b8cff] rounded px-1 py-0.5 leading-none">USD</span>
+                          )}
+                        </div>
                         <p className="text-[11px] text-gray-400 mt-0.5">
                           {new Date(s.createdAt).toLocaleDateString('ko-KR', { year: 'numeric', month: 'short', day: 'numeric' })}
                         </p>
                       </div>
                     </div>
                     <div className="flex items-center justify-end">
-                      <p className="text-[15px] font-medium text-gray-800 tabular-nums">{fmt(s.totalAssets)}</p>
+                      {(() => { const a = fmtAmount(s.totalAssets, s); return (
+                        <div className="text-right">
+                          <p className="text-[15px] font-medium text-gray-800 tabular-nums">{a.usd ?? a.krw}</p>
+                          {a.usd && a.krw && <p className="text-[11px] text-gray-400 tabular-nums">≈{a.krw}</p>}
+                        </div>
+                      )})()}
                     </div>
                     <div className="flex items-center justify-end">
-                      <p className={`text-[15px] font-medium tabular-nums ${s.totalLiab > 0 ? 'text-[#d94f4f]' : 'text-gray-400'}`}>{fmt(s.totalLiab)}</p>
+                      {(() => { const a = fmtAmount(s.totalLiab, s); return (
+                        <div className="text-right">
+                          <p className={`text-[15px] font-medium tabular-nums ${s.totalLiab > 0 ? 'text-[#d94f4f]' : 'text-gray-400'}`}>{a.usd ?? a.krw}</p>
+                          {a.usd && a.krw && <p className="text-[11px] text-gray-400 tabular-nums">≈{a.krw}</p>}
+                        </div>
+                      )})()}
                     </div>
                     <div className="flex items-center justify-end gap-2">
-                      <p className={`text-[15px] font-semibold tabular-nums ${s.netWorth >= 0 ? 'text-[#2a9d5c]' : 'text-[#d94f4f]'}`}>{fmt(s.netWorth)}</p>
+                      {(() => { const a = fmtAmount(s.netWorth, s); return (
+                        <div className="text-right">
+                          <p className={`text-[15px] font-semibold tabular-nums ${s.netWorth >= 0 ? 'text-[#2a9d5c]' : 'text-[#d94f4f]'}`}>{a.usd ?? a.krw}</p>
+                          {a.usd && a.krw && <p className="text-[11px] text-gray-400 tabular-nums">≈{a.krw}</p>}
+                        </div>
+                      )})()}
                       <button
-                        onClick={e => { e.stopPropagation(); setSettingsModal({ id: s.id, name: s.name, decimalPlaces: s.decimalPlaces ?? 0 }) }}
+                        onClick={e => { e.stopPropagation(); setSettingsModal({ id: s.id, name: s.name, decimalPlaces: s.decimalPlaces ?? 0, currency: s.currency ?? 'KRW', exchangeRate: s.exchangeRate ?? null }) }}
                         className="p-1 rounded-md hover:bg-gray-200 text-gray-300 hover:text-gray-500 flex-shrink-0 transition-colors">
                         <i className="ti ti-settings text-xs" />
                       </button>
@@ -342,7 +395,7 @@ export default function SectionsPage() {
       {/* 섹션 만들기 버튼 */}
       <div className="flex justify-center py-4 border-t border-gray-100 bg-white flex-shrink-0">
         <button
-          onClick={() => { setShowModal(true); setNewName(''); setCreateMode('fresh') }}
+          onClick={() => { setShowModal(true); setNewName(''); setCreateMode('fresh'); setNewCurrency('KRW'); setNewExchangeRate('') }}
           className="flex items-center gap-2 px-6 py-2.5 bg-[#1a1f2e] text-white text-[14px] font-semibold rounded-xl hover:opacity-90 transition-opacity">
           <i className="ti ti-plus text-[14px]" />
           섹션 만들기
@@ -374,6 +427,35 @@ export default function SectionsPage() {
                 <p className="text-[11px] text-gray-400 mt-2">
                   예: {(1234.5678).toFixed(settingsModal.decimalPlaces).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}원
                 </p>
+              </div>
+              <div>
+                <p className="text-[12px] font-medium text-gray-500 mb-2">통화</p>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setSettingsModal(prev => prev ? { ...prev, currency: 'KRW', exchangeRate: null } : prev)}
+                    className={`flex-1 py-2 text-[13px] font-semibold rounded-lg transition-colors
+                      ${settingsModal.currency === 'KRW' ? 'bg-[#1a1f2e] text-white' : 'border border-gray-200 text-gray-500 hover:bg-gray-50'}`}>
+                    KRW (원화)
+                  </button>
+                  <button
+                    onClick={() => setSettingsModal(prev => prev ? { ...prev, currency: 'USD' } : prev)}
+                    className={`flex-1 py-2 text-[13px] font-semibold rounded-lg transition-colors
+                      ${settingsModal.currency === 'USD' ? 'bg-[#6b8cff] text-white' : 'border border-gray-200 text-gray-500 hover:bg-gray-50'}`}>
+                    USD (달러)
+                  </button>
+                </div>
+                {settingsModal.currency === 'USD' && (
+                  <div className="mt-2">
+                    <p className="text-[11px] text-gray-400 mb-1">1 USD = ___원 (환율)</p>
+                    <input
+                      type="number"
+                      placeholder="예: 1380"
+                      value={settingsModal.exchangeRate ?? ''}
+                      onChange={e => setSettingsModal(prev => prev ? { ...prev, exchangeRate: Number(e.target.value) || null } : prev)}
+                      className="w-full border border-gray-200 text-[14px] text-gray-800 px-3 py-2 rounded-lg outline-none focus:border-[#6b8cff] placeholder-gray-300"
+                    />
+                  </div>
+                )}
               </div>
               <div className="flex gap-2 pt-1">
                 <button onClick={() => setSettingsModal(null)}
@@ -505,7 +587,7 @@ export default function SectionsPage() {
       {/* 섹션 만들기 모달 */}
       {showModal && (
         <div className="fixed inset-0 bg-black/30 z-50 flex items-center justify-center"
-          onClick={() => setShowModal(false)}>
+          onClick={() => { setShowModal(false); setNewCurrency('KRW'); setNewExchangeRate('') }}>
           <div className="bg-white rounded-2xl p-5 w-72 shadow-xl" onClick={e => e.stopPropagation()}>
             <h3 className="text-[15px] font-semibold text-gray-800 mb-4">섹션 만들기</h3>
             <div className="space-y-3">
@@ -531,8 +613,37 @@ export default function SectionsPage() {
                   데이터 복사
                 </button>
               </div>
+              <div>
+                <p className="text-[12px] font-medium text-gray-500 mb-2">통화</p>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => { setNewCurrency('KRW'); setNewExchangeRate('') }}
+                    className={`flex-1 text-[13px] font-semibold py-2 rounded-lg transition-colors
+                      ${newCurrency === 'KRW' ? 'bg-[#1a1f2e] text-white' : 'border border-gray-200 text-gray-500 hover:bg-gray-50'}`}>
+                    KRW (원화)
+                  </button>
+                  <button
+                    onClick={() => setNewCurrency('USD')}
+                    className={`flex-1 text-[13px] font-semibold py-2 rounded-lg transition-colors
+                      ${newCurrency === 'USD' ? 'bg-[#6b8cff] text-white' : 'border border-gray-200 text-gray-500 hover:bg-gray-50'}`}>
+                    USD (달러)
+                  </button>
+                </div>
+                {newCurrency === 'USD' && (
+                  <div className="mt-2">
+                    <p className="text-[11px] text-gray-400 mb-1">1 USD = ___원 (환율)</p>
+                    <input
+                      type="number"
+                      placeholder="예: 1380"
+                      value={newExchangeRate}
+                      onChange={e => setNewExchangeRate(e.target.value)}
+                      className="w-full border border-gray-200 text-[14px] text-gray-800 px-3 py-2 rounded-lg outline-none focus:border-[#6b8cff] placeholder-gray-300"
+                    />
+                  </div>
+                )}
+              </div>
               <div className="flex gap-2 pt-1">
-                <button onClick={() => setShowModal(false)}
+                <button onClick={() => { setShowModal(false); setNewCurrency('KRW'); setNewExchangeRate('') }}
                   className="flex-1 py-2 text-[13px] font-semibold border border-gray-200 rounded-lg text-gray-500 hover:bg-gray-50">
                   취소
                 </button>

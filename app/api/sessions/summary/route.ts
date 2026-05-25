@@ -58,6 +58,8 @@ export async function GET(req: NextRequest) {
       name:          s.name,
       createdAt:     s.createdAt,
       decimalPlaces: s.decimalPlaces,
+      currency:      s.currency ?? 'KRW',
+      exchangeRate:  s.exchangeRate ?? null,
       totalAssets:   sums.totalAssets,
       totalLiab:     sums.totalLiab,
       netWorth:      sums.totalAssets - sums.totalLiab,

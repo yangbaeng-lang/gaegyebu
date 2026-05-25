@@ -12,6 +12,8 @@ model Session {
   name          String
   sortOrder     Int      @default(0)
   decimalPlaces Int      @default(0)
+  currency      String   @default("KRW")
+  exchangeRate  Float?
   createdAt     DateTime @default(now())
 }
 

@@ -28,12 +28,19 @@ export async function PATCH(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   await ensureDefaultSession()
-  const { name, mode, sourceId } = await req.json()
+  const { name, mode, sourceId, currency, exchangeRate } = await req.json()
   const sid = sourceId ?? getSid(req)
 
   const maxSession = await prisma.session.findFirst({ orderBy: { sortOrder: 'desc' } })
   const sortOrder = (maxSession?.sortOrder ?? -1) + 1
-  const newSession = await prisma.session.create({ data: { name: name ?? '새 세션', sortOrder } })
+  const newSession = await prisma.session.create({
+    data: {
+      name: name ?? '새 세션',
+      sortOrder,
+      currency: currency ?? 'KRW',
+      exchangeRate: currency === 'USD' ? (Number(exchangeRate) || null) : null,
+    }
+  })
   const nid = newSession.id
 
   if (mode === 'copy') {

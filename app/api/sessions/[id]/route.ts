@@ -17,6 +17,10 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   const data: Record<string, unknown> = {}
   if (body.name          !== undefined) data.name          = body.name
   if (body.decimalPlaces !== undefined) data.decimalPlaces = Number(body.decimalPlaces)
+  if (body.currency      !== undefined) {
+    data.currency     = body.currency
+    data.exchangeRate = body.currency === 'USD' ? (Number(body.exchangeRate) || null) : null
+  }
   const session = await prisma.session.update({ where: { id }, data })
   return NextResponse.json(session)
 }
