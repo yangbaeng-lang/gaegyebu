@@ -83,7 +83,7 @@ function ScrollChart({ data, children }: {
     requestAnimationFrame(() => {
       if (wrapRef.current) wrapRef.current.scrollLeft = wrapRef.current.scrollWidth
     })
-  }, [innerW])
+  }, [innerW, data])
 
   return (
     <>
@@ -170,21 +170,25 @@ export default function OverviewPage() {
   }
 
   useEffect(() => {
-    // sectionBudget은 세션 ID 불필요 → 즉시 병렬 시작
+    // sectionBudget은 세션 ID 불필요 → 즉시 시작
     fetchSectionBudget(mode)
 
-    Promise.all([
-      fetch('/api/sessions').then(r => r.json()),
-      fetch('/api/sessions/summary').then(r => r.json()),
-    ]).then(([sd, sumD]: [{ sessions: SessionItem[] }, SectionSummary[]]) => {
+    // 세션 목록(빠름)을 먼저 받아 ID 확정 → summary/series/cumul 병렬 시작
+    fetch('/api/sessions').then(r => r.json()).then((sd: { sessions: SessionItem[] }) => {
       const sessions = sd.sessions ?? []
       setAllSessions(sessions)
-      setSummary(sumD)
       const EXCLUDED = ['병훈급여','아름급여']
       const ids = new Set(sessions.filter(s => !EXCLUDED.includes(s.name)).map(s => s.id))
       setSelected(ids)
-      setSummaryLoading(false)
-      return Promise.all([fetchSeries(mode, ids), fetchCumul(mode, ids)])
+
+      // summary, series, cumul 병렬
+      fetch('/api/sessions/summary').then(r => r.json()).then((sumD: SectionSummary[]) => {
+        setSummary(sumD)
+        setSummaryLoading(false)
+      }).catch(() => setSummaryLoading(false))
+
+      fetchSeries(mode, ids)
+      fetchCumul(mode, ids)
     }).catch(() => setSummaryLoading(false))
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
@@ -207,10 +211,6 @@ export default function OverviewPage() {
   const totalAssets = filteredSummary.reduce((s, d) => s + d.totalAssets, 0)
   const totalLiab   = filteredSummary.reduce((s, d) => s + d.totalLiab,   0)
   const totalNet    = filteredSummary.reduce((s, d) => s + d.netWorth,     0)
-
-  if (summaryLoading) return (
-    <div className="flex-1 flex items-center justify-center text-gray-400 text-sm">불러오는 중…</div>
-  )
 
   const xProps = { tick: { fontSize: 10, fill: '#9ca3af' }, axisLine: false as const, tickLine: false as const, interval: 0 as const }
   const yProps = { tick: { fontSize: 10, fill: '#9ca3af' }, axisLine: false as const, tickLine: false as const, width: 48 }
@@ -246,21 +246,29 @@ export default function OverviewPage() {
 
           {/* 합계 요약 */}
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm px-5 py-4 flex flex-col md:w-72 md:flex-shrink-0">
-            <SummaryRow label="전체 자산"   value={totalAssets} color="text-[#4a6fdb]" bg="bg-[#4a6fdb]/8" icon="ti-wallet"      />
-            <div className="border-t border-gray-100 my-2" />
-            <SummaryRow label="전체 부채"   value={totalLiab}   color="text-[#d94f4f]" bg="bg-[#d94f4f]/8" icon="ti-credit-card" />
-            <div className="border-t border-gray-100 my-2" />
-            <SummaryRow label="전체 순자산" value={totalNet}
-              color={totalNet >= 0 ? 'text-[#2a9d5c]' : 'text-[#d94f4f]'}
-              bg={totalNet >= 0 ? 'bg-[#2a9d5c]/8' : 'bg-[#d94f4f]/8'}
-              icon="ti-trending-up" />
+            {summaryLoading ? (
+              <div className="flex-1 flex items-center justify-center text-gray-300 text-sm">불러오는 중…</div>
+            ) : (
+              <>
+                <SummaryRow label="전체 자산"   value={totalAssets} color="text-[#4a6fdb]" bg="bg-[#4a6fdb]/8" icon="ti-wallet"      />
+                <div className="border-t border-gray-100 my-2" />
+                <SummaryRow label="전체 부채"   value={totalLiab}   color="text-[#d94f4f]" bg="bg-[#d94f4f]/8" icon="ti-credit-card" />
+                <div className="border-t border-gray-100 my-2" />
+                <SummaryRow label="전체 순자산" value={totalNet}
+                  color={totalNet >= 0 ? 'text-[#2a9d5c]' : 'text-[#d94f4f]'}
+                  bg={totalNet >= 0 ? 'bg-[#2a9d5c]/8' : 'bg-[#d94f4f]/8'}
+                  icon="ti-trending-up" />
+              </>
+            )}
           </div>
 
           {/* 섹션별 비교 차트 */}
           <div className="h-[300px] bg-white rounded-2xl border border-gray-100 shadow-sm p-4 flex flex-col md:h-auto md:flex-1 md:min-w-0">
             <p className="text-sm font-semibold text-gray-600 mb-2 flex-shrink-0">섹션별 자산 / 부채 / 순자산</p>
             <div className="flex-1 min-h-0">
-              {filteredSummary.length === 0
+              {summaryLoading
+                ? <div className="h-full flex items-center justify-center text-gray-300 text-sm">불러오는 중…</div>
+                : filteredSummary.length === 0
                 ? <div className="h-full flex items-center justify-center text-gray-300 text-sm">선택된 섹션 없음</div>
                 : (
                   <ResponsiveContainer width="100%" height="100%">

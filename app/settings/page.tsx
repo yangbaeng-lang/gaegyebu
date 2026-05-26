@@ -331,7 +331,7 @@ export default function SettingsPage() {
           <h3 className="text-xs font-medium text-gray-700">{label}</h3>
           <span className="text-[10px] text-gray-400">{total}개</span>
           {groups.length > 0 && (
-            <button onClick={toggleAll} className="ml-auto text-[10px] text-gray-400 hover:text-blue-500 flex items-center gap-0.5 px-1.5 py-0.5 rounded hover:bg-blue-50 transition-colors">
+            <button onClick={toggleAll} className="ml-auto text-[10px] text-gray-400 hover:text-blue-500 flex items-center gap-0.5 px-1.5 py-0.5 rounded hover:bg-blue-50 transition-colors whitespace-nowrap flex-shrink-0">
               <i className={`ti ${allCollapsed ? 'ti-chevrons-down' : 'ti-chevrons-up'} text-xs`} />
               {allCollapsed ? '전체 펼치기' : '전체 접기'}
             </button>
@@ -513,7 +513,7 @@ export default function SettingsPage() {
                 <i className={`ti ${sec.groupIcon} text-sm text-gray-400`} />
                 <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">{sec.groupLabel}</span>
               </div>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 {sec.items.map(item => renderSection(item.type, item.label, item.icon))}
               </div>
             </div>

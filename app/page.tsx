@@ -492,7 +492,7 @@ export default function InsertPage() {
               {/* ④ 입금 */}
               <div className="md:flex-1 border-r border-gray-100 flex flex-col">
                 <ColHeader label="입금" />
-                <div className="overflow-y-auto max-h-60 md:max-h-none">
+                <div>
                   <AcctPane side="to" selected={form.toAcct} sections={toSections}
                     onSelect={acc => setForm(f => ({ ...f, toAcct: acc }))}
                     showHidden={showHidden} onToggleShowHidden={() => setShowHidden(v => !v)} />
@@ -502,7 +502,7 @@ export default function InsertPage() {
               {/* ⑤ 출금 */}
               <div className="md:flex-1 flex flex-col">
                 <ColHeader label="출금" />
-                <div className="overflow-y-auto max-h-60 md:max-h-none">
+                <div>
                   <AcctPane side="from" selected={form.fromAcct} sections={fromSections}
                     onSelect={acc => setForm(f => ({ ...f, fromAcct: acc }))}
                     showHidden={showHidden} onToggleShowHidden={() => setShowHidden(v => !v)} />

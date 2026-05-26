@@ -11,14 +11,14 @@ export default function StockChartsLayout({ children }: { children: React.ReactN
 
   return (
     <div className="flex flex-col h-full">
-      <div className="flex-shrink-0 bg-white border-b border-gray-100 px-6 flex items-end gap-0">
+      <div className="flex-shrink-0 bg-white border-b border-gray-100 flex items-end gap-0 overflow-x-auto scrollbar-hide">
         {TABS.map(tab => {
           const active = pathname.startsWith(tab.href)
           return (
             <Link
               key={tab.href}
               href={tab.href}
-              className={`flex items-center gap-1.5 px-5 py-3 text-sm font-semibold border-b-2 transition-colors ${
+              className={`flex items-center gap-1.5 px-4 py-3 text-sm font-semibold border-b-2 transition-colors whitespace-nowrap flex-shrink-0 ${
                 active
                   ? 'border-[#22c55e] text-[#22c55e]'
                   : 'border-transparent text-gray-400 hover:text-gray-600 hover:border-gray-200'

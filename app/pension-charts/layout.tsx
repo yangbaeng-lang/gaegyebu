@@ -16,7 +16,7 @@ export default function PensionChartsLayout({ children }: { children: React.Reac
   return (
     <div className="flex flex-col h-full">
       {/* 탭 바 */}
-      <div className="flex-shrink-0 bg-white border-b border-gray-100 px-6 flex items-end gap-0">
+      <div className="flex-shrink-0 bg-white border-b border-gray-100 flex items-end gap-0 overflow-x-auto scrollbar-hide">
         {TABS.map(tab => {
           const active = tab.href === '/pension-charts'
             ? pathname === '/pension-charts'
@@ -25,7 +25,7 @@ export default function PensionChartsLayout({ children }: { children: React.Reac
             <Link
               key={tab.href}
               href={tab.href}
-              className={`flex items-center gap-1.5 px-5 py-3 text-sm font-semibold border-b-2 transition-colors ${
+              className={`flex items-center gap-1.5 px-4 py-3 text-sm font-semibold border-b-2 transition-colors whitespace-nowrap flex-shrink-0 ${
                 active
                   ? 'border-[#6b8cff] text-[#6b8cff]'
                   : 'border-transparent text-gray-400 hover:text-gray-600 hover:border-gray-200'

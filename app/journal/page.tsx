@@ -377,7 +377,7 @@ export default function JournalPage() {
           <div className="space-y-3">
 
             {/* KPI */}
-            <div className="grid grid-cols-4 gap-2">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
               {[
                 { label: '총 수입',  val: fmt(kpiIncome),  color: '#2a9d5c' },
                 { label: '총 지출',  val: fmt(kpiExpense), color: '#d94f4f' },
@@ -385,8 +385,8 @@ export default function JournalPage() {
                 { label: '거래 건수', val: `${entries.length}건`, color: '#888' },
               ].map(k => (
                 <div key={k.label} className="bg-white border border-gray-100 rounded-xl p-3">
-                  <p className="text-xs text-gray-400 mb-1">{k.label}</p>
-                  <p className="text-base font-medium" style={{ color: k.color }}>{k.val}</p>
+                  <p className="text-xs text-gray-400 mb-1 whitespace-nowrap">{k.label}</p>
+                  <p className="text-base font-medium whitespace-nowrap" style={{ color: k.color }}>{k.val}</p>
                 </div>
               ))}
             </div>

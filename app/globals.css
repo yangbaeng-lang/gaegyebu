@@ -18,6 +18,10 @@ body {
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 99px; }
 
+/* 스크롤바 숨김 유틸리티 */
+.scrollbar-hide { scrollbar-width: none; -ms-overflow-style: none; }
+.scrollbar-hide::-webkit-scrollbar { display: none; }
+
 /* 사이드바 active 링크 강조 — JS pathname 비교로 클래스 추가 */
 .sidebar-active {
   background: rgba(107, 140, 255, 0.18) !important;

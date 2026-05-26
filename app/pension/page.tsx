@@ -157,7 +157,7 @@ export default function PensionPage() {
           <span className="text-sm text-gray-700 truncate">{item.name}</span>
         </div>
 
-        <span className="text-sm text-gray-600 tabular-nums text-right">{fmt(item.납입액)}</span>
+        <span className="text-sm text-gray-600 tabular-nums text-right whitespace-nowrap">{fmt(item.납입액)}</span>
 
         <div className="flex items-center justify-end gap-1 group">
           {isEditing ? (
@@ -186,7 +186,7 @@ export default function PensionPage() {
               )}
               <button
                 onClick={() => startEdit(item.name, item.평가액, item.hasEval)}
-                className={`text-sm tabular-nums px-2 py-0.5 rounded-lg transition-colors
+                className={`text-sm tabular-nums px-2 py-0.5 rounded-lg transition-colors whitespace-nowrap
                   ${item.hasEval
                     ? 'text-gray-800 hover:bg-blue-50 hover:text-blue-600'
                     : 'text-gray-300 hover:bg-blue-50 hover:text-blue-400 border border-dashed border-gray-200'}`}>
@@ -196,15 +196,15 @@ export default function PensionPage() {
           )}
         </div>
 
-        <span className={`text-sm tabular-nums text-right ${rateColor(item.평가손익)}`}>
+        <span className={`text-sm tabular-nums text-right whitespace-nowrap ${rateColor(item.평가손익)}`}>
           {fmtPnl(item.평가손익)}
         </span>
 
-        <span className={`text-sm font-semibold tabular-nums text-right ${rateColor(item.수익률)}`}>
+        <span className={`text-sm font-semibold tabular-nums text-right whitespace-nowrap ${rateColor(item.수익률)}`}>
           {fmtRate(item.수익률)}
         </span>
 
-        <span className="text-sm tabular-nums text-right text-gray-400">
+        <span className="text-sm tabular-nums text-right text-gray-400 whitespace-nowrap">
           {fmtPct(item.비중)}
         </span>
 
@@ -306,11 +306,11 @@ export default function PensionPage() {
                         <span className="text-sm font-semibold text-gray-600">{grp}</span>
                         <span className="text-xs text-gray-400">({rows.length})</span>
                       </div>
-                      <span className="text-sm font-semibold text-gray-600 tabular-nums text-right">{fmt(t.납)}</span>
-                      <span className="text-sm font-semibold text-gray-600 tabular-nums text-right">{t.평 > 0 ? fmt(t.평) : '-'}</span>
-                      <span className={`text-sm font-semibold tabular-nums text-right ${rateColor(t.손익)}`}>{fmtPnl(t.손익)}</span>
-                      <span className={`text-sm font-semibold tabular-nums text-right ${rateColor(t.율)}`}>{fmtRate(t.율)}</span>
-                      <span className="text-sm font-semibold text-gray-500 tabular-nums text-right">{fmtPct(t.비중)}</span>
+                      <span className="text-sm font-semibold text-gray-600 tabular-nums text-right whitespace-nowrap">{fmt(t.납)}</span>
+                      <span className="text-sm font-semibold text-gray-600 tabular-nums text-right whitespace-nowrap">{t.평 > 0 ? fmt(t.평) : '-'}</span>
+                      <span className={`text-sm font-semibold tabular-nums text-right whitespace-nowrap ${rateColor(t.손익)}`}>{fmtPnl(t.손익)}</span>
+                      <span className={`text-sm font-semibold tabular-nums text-right whitespace-nowrap ${rateColor(t.율)}`}>{fmtRate(t.율)}</span>
+                      <span className="text-sm font-semibold text-gray-500 tabular-nums text-right whitespace-nowrap">{fmtPct(t.비중)}</span>
                       <span />
                     </button>
                     {isOpen && rows.map(item => renderItemRow(item, true))}
@@ -323,15 +323,15 @@ export default function PensionPage() {
               <div className="grid items-center pl-6 pr-2 py-4 bg-[#1a1f2e] font-semibold"
                 style={{ gridTemplateColumns: COLS }}>
                 <span className="text-sm text-white/70">합계</span>
-                <span className="text-sm text-white tabular-nums text-right">{fmt(total납입액)}</span>
-                <span className="text-sm text-white tabular-nums text-right">{total평가액 > 0 ? fmt(total평가액) : '-'}</span>
-                <span className={`text-sm tabular-nums text-right font-semibold ${total손익 === null ? 'text-white/30' : total손익 === 0 ? 'text-white' : total손익 > 0 ? 'text-red-400' : 'text-blue-400'}`}>
+                <span className="text-sm text-white tabular-nums text-right whitespace-nowrap">{fmt(total납입액)}</span>
+                <span className="text-sm text-white tabular-nums text-right whitespace-nowrap">{total평가액 > 0 ? fmt(total평가액) : '-'}</span>
+                <span className={`text-sm tabular-nums text-right font-semibold whitespace-nowrap ${total손익 === null ? 'text-white/30' : total손익 === 0 ? 'text-white' : total손익 > 0 ? 'text-red-400' : 'text-blue-400'}`}>
                   {fmtPnl(total손익)}
                 </span>
-                <span className={`text-sm tabular-nums text-right font-semibold ${total수익률 === null ? 'text-white/30' : total수익률 === 0 ? 'text-white' : total수익률 > 0 ? 'text-red-400' : 'text-blue-400'}`}>
+                <span className={`text-sm tabular-nums text-right font-semibold whitespace-nowrap ${total수익률 === null ? 'text-white/30' : total수익률 === 0 ? 'text-white' : total수익률 > 0 ? 'text-red-400' : 'text-blue-400'}`}>
                   {fmtRate(total수익률)}
                 </span>
-                <span className="text-sm text-white/50 text-right">100%</span>
+                <span className="text-sm text-white/50 text-right whitespace-nowrap">100%</span>
                 <span />
               </div>
 
