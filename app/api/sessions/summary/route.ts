@@ -53,6 +53,9 @@ export async function GET(req: NextRequest) {
 
   const results = sessions.map(s => {
     const sums = summaryMap.get(s.id) ?? { totalAssets: 0, totalLiab: 0 }
+    const rate = (s.currency && s.currency !== 'KRW' && s.exchangeRate) ? s.exchangeRate : 1
+    const totalAssets = Math.round(sums.totalAssets * rate)
+    const totalLiab   = Math.round(sums.totalLiab   * rate)
     return {
       id:            s.id,
       name:          s.name,
@@ -60,9 +63,9 @@ export async function GET(req: NextRequest) {
       decimalPlaces: s.decimalPlaces,
       currency:      s.currency ?? 'KRW',
       exchangeRate:  s.exchangeRate ?? null,
-      totalAssets:   sums.totalAssets,
-      totalLiab:     sums.totalLiab,
-      netWorth:      sums.totalAssets - sums.totalLiab,
+      totalAssets,
+      totalLiab,
+      netWorth:      totalAssets - totalLiab,
     }
   })
 

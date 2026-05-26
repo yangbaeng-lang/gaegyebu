@@ -23,7 +23,7 @@ function fmtY(v: number) {
   const a = Math.abs(v)
   if (a >= 100_000_000) return `${(v / 100_000_000).toFixed(1)}억`
   if (a >= 10_000)      return `${(v / 10_000).toFixed(0)}만`
-  return String(v)
+  return `${Math.round(v).toLocaleString()}`
 }
 function fmtFull(v: number) { return v.toLocaleString('ko-KR') + '원' }
 const fmtLabel = (v: number) => (!v || v === 0) ? '' : fmtY(v)
