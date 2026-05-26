@@ -34,6 +34,7 @@ function fmtPnl(v: number | null) {
 }
 
 const COLS = '3fr 1.5fr 1.7fr 1.5fr 1fr 0.8fr 0.6fr'
+const COLS_MOBILE = '1fr auto auto'
 
 export default function PensionPage() {
   const today = new Date()
@@ -48,6 +49,7 @@ export default function PensionPage() {
   const [editingName, setEditingName] = useState<string | null>(null)
   const [editVal,     setEditVal]     = useState('')
   const [toast,       setToast]       = useState('')
+  const [isMobile,    setIsMobile]    = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
 
   const yearMonth = `${year}-${String(month).padStart(2, '0')}`
@@ -75,6 +77,13 @@ export default function PensionPage() {
   useEffect(() => {
     if (editingName) inputRef.current?.focus()
   }, [editingName])
+
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 768)
+    check()
+    window.addEventListener('resize', check)
+    return () => window.removeEventListener('resize', check)
+  }, [])
 
   const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(''), 2000) }
 
@@ -141,14 +150,17 @@ export default function PensionPage() {
     return { 납, 평, 손익, 율, 비중 }
   }
 
+  const cols = isMobile ? COLS_MOBILE : COLS
+  const px = isMobile ? 'pl-3 pr-3' : 'pl-6 pr-2'
+
   const renderItemRow = (item: PensionItem, indent = false) => {
     const isEditing = editingName === item.name
     return (
       <div key={item.name}
-        className="grid items-center pl-6 pr-2 py-3 border-b border-gray-50 hover:bg-gray-50 transition-colors"
-        style={{ gridTemplateColumns: COLS }}>
+        className={`grid items-center ${px} py-3 border-b border-gray-50 hover:bg-gray-50 transition-colors`}
+        style={{ gridTemplateColumns: cols }}>
 
-        <div className={`flex items-center gap-2.5 ${indent ? 'pl-5' : ''}`}>
+        <div className={`flex items-center gap-2.5 min-w-0 ${indent ? (isMobile ? 'pl-4' : 'pl-5') : ''}`}>
           <div className="w-6 h-6 rounded-md flex items-center justify-center flex-shrink-0"
             style={{ background: (item.color || '#6b8cff') + '20' }}>
             <i className={`ti ${item.icon || 'ti-pig-money'} text-xs`}
@@ -157,74 +169,110 @@ export default function PensionPage() {
           <span className="text-sm text-gray-700 truncate">{item.name}</span>
         </div>
 
-        <span className="text-sm text-gray-600 tabular-nums text-right whitespace-nowrap">{fmt(item.납입액)}</span>
+        <span className={`text-sm text-gray-600 tabular-nums text-right whitespace-nowrap ${isMobile ? 'px-2' : ''}`}>
+          {fmt(item.납입액)}
+        </span>
 
-        <div className="flex items-center justify-end gap-1 group">
-          {isEditing ? (
-            <input
-              ref={inputRef}
-              type="text"
-              value={editVal}
-              onChange={e => setEditVal(e.target.value)}
-              onBlur={() => saveEval(item.name, editVal)}
-              onKeyDown={e => {
-                if (e.key === 'Enter') saveEval(item.name, editVal)
-                if (e.key === 'Escape') setEditingName(null)
-              }}
-              className="w-36 text-sm text-right border border-blue-300 rounded-lg px-2 py-0.5 focus:outline-none focus:border-blue-400 bg-blue-50"
-              placeholder="금액 입력"
-            />
-          ) : (
-            <>
-              {item.납입액 !== 0 && (
-                <button
-                  title="납입액과 동일하게 설정"
-                  onClick={() => copyNapip(item)}
-                  className="opacity-0 group-hover:opacity-100 transition-opacity w-5 h-5 flex items-center justify-center rounded text-gray-300 hover:text-blue-500 hover:bg-blue-50 flex-shrink-0">
-                  <i className="ti ti-copy text-[11px]" />
-                </button>
-              )}
+        {isMobile ? (
+          <div className="flex flex-col items-end gap-0.5">
+            {isEditing ? (
+              <input
+                ref={inputRef}
+                type="text"
+                value={editVal}
+                onChange={e => setEditVal(e.target.value)}
+                onBlur={() => saveEval(item.name, editVal)}
+                onKeyDown={e => {
+                  if (e.key === 'Enter') saveEval(item.name, editVal)
+                  if (e.key === 'Escape') setEditingName(null)
+                }}
+                className="w-28 text-sm text-right border border-blue-300 rounded-lg px-2 py-0.5 focus:outline-none focus:border-blue-400 bg-blue-50"
+                placeholder="금액 입력"
+              />
+            ) : (
               <button
                 onClick={() => startEdit(item.name, item.평가액, item.hasEval)}
-                className={`text-sm tabular-nums px-2 py-0.5 rounded-lg transition-colors whitespace-nowrap
+                className={`text-sm tabular-nums px-1 py-0.5 rounded-lg transition-colors whitespace-nowrap
                   ${item.hasEval
-                    ? 'text-gray-800 hover:bg-blue-50 hover:text-blue-600'
-                    : 'text-gray-300 hover:bg-blue-50 hover:text-blue-400 border border-dashed border-gray-200'}`}>
+                    ? 'text-gray-800 active:bg-blue-50 active:text-blue-600'
+                    : 'text-gray-300 active:bg-blue-50 active:text-blue-400 border border-dashed border-gray-200'}`}>
                 {item.hasEval ? fmt(item.평가액) : '입력'}
               </button>
-            </>
-          )}
-        </div>
+            )}
+            {item.수익률 !== null && !isEditing && (
+              <span className={`text-xs tabular-nums ${rateColor(item.수익률)}`}>{fmtRate(item.수익률)}</span>
+            )}
+          </div>
+        ) : (
+          <>
+            <div className="flex items-center justify-end gap-1 group">
+              {isEditing ? (
+                <input
+                  ref={inputRef}
+                  type="text"
+                  value={editVal}
+                  onChange={e => setEditVal(e.target.value)}
+                  onBlur={() => saveEval(item.name, editVal)}
+                  onKeyDown={e => {
+                    if (e.key === 'Enter') saveEval(item.name, editVal)
+                    if (e.key === 'Escape') setEditingName(null)
+                  }}
+                  className="w-36 text-sm text-right border border-blue-300 rounded-lg px-2 py-0.5 focus:outline-none focus:border-blue-400 bg-blue-50"
+                  placeholder="금액 입력"
+                />
+              ) : (
+                <>
+                  {item.납입액 !== 0 && (
+                    <button
+                      title="납입액과 동일하게 설정"
+                      onClick={() => copyNapip(item)}
+                      className="opacity-0 group-hover:opacity-100 transition-opacity w-5 h-5 flex items-center justify-center rounded text-gray-300 hover:text-blue-500 hover:bg-blue-50 flex-shrink-0">
+                      <i className="ti ti-copy text-[11px]" />
+                    </button>
+                  )}
+                  <button
+                    onClick={() => startEdit(item.name, item.평가액, item.hasEval)}
+                    className={`text-sm tabular-nums px-2 py-0.5 rounded-lg transition-colors whitespace-nowrap
+                      ${item.hasEval
+                        ? 'text-gray-800 hover:bg-blue-50 hover:text-blue-600'
+                        : 'text-gray-300 hover:bg-blue-50 hover:text-blue-400 border border-dashed border-gray-200'}`}>
+                    {item.hasEval ? fmt(item.평가액) : '입력'}
+                  </button>
+                </>
+              )}
+            </div>
 
-        <span className={`text-sm tabular-nums text-right whitespace-nowrap ${rateColor(item.평가손익)}`}>
-          {fmtPnl(item.평가손익)}
-        </span>
+            <span className={`text-sm tabular-nums text-right whitespace-nowrap ${rateColor(item.평가손익)}`}>
+              {fmtPnl(item.평가손익)}
+            </span>
 
-        <span className={`text-sm font-semibold tabular-nums text-right whitespace-nowrap ${rateColor(item.수익률)}`}>
-          {fmtRate(item.수익률)}
-        </span>
+            <span className={`text-sm font-semibold tabular-nums text-right whitespace-nowrap ${rateColor(item.수익률)}`}>
+              {fmtRate(item.수익률)}
+            </span>
 
-        <span className="text-sm tabular-nums text-right text-gray-400 whitespace-nowrap">
-          {fmtPct(item.비중)}
-        </span>
+            <span className="text-sm tabular-nums text-right text-gray-400 whitespace-nowrap">
+              {fmtPct(item.비중)}
+            </span>
 
-        <span className="flex items-center justify-center pl-12">
-          {rankMap[item.name] !== undefined ? (() => {
-            const r = rankMap[item.name]
-            const cls =
-              r === 1 ? 'text-yellow-600 bg-yellow-50 border border-yellow-200' :
-              r === 2 ? 'text-slate-500 bg-slate-100 border border-slate-200' :
-              r === 3 ? 'text-orange-600 bg-orange-50 border border-orange-200' :
-              r === 4 ? 'text-purple-600 bg-purple-50 border border-purple-200' :
-              r === 5 ? 'text-teal-600 bg-teal-50 border border-teal-200' :
-              'text-gray-400'
-            return (
-              <span className={`text-[13px] font-bold tabular-nums px-1.5 py-0.5 rounded ${cls}`}>
-                {r}
-              </span>
-            )
-          })() : <span className="text-gray-300 text-[13px]">-</span>}
-        </span>
+            <span className="flex items-center justify-center pl-12">
+              {rankMap[item.name] !== undefined ? (() => {
+                const r = rankMap[item.name]
+                const cls =
+                  r === 1 ? 'text-yellow-600 bg-yellow-50 border border-yellow-200' :
+                  r === 2 ? 'text-slate-500 bg-slate-100 border border-slate-200' :
+                  r === 3 ? 'text-orange-600 bg-orange-50 border border-orange-200' :
+                  r === 4 ? 'text-purple-600 bg-purple-50 border border-purple-200' :
+                  r === 5 ? 'text-teal-600 bg-teal-50 border border-teal-200' :
+                  'text-gray-400'
+                return (
+                  <span className={`text-[13px] font-bold tabular-nums px-1.5 py-0.5 rounded ${cls}`}>
+                    {r}
+                  </span>
+                )
+              })() : <span className="text-gray-300 text-[13px]">-</span>}
+            </span>
+          </>
+        )}
       </div>
     )
   }
@@ -232,26 +280,26 @@ export default function PensionPage() {
   return (
     <div className="flex flex-col h-full bg-gray-50">
 
-      <div className="bg-white border-b border-gray-100 px-6 py-3 flex items-center flex-shrink-0">
+      <div className="bg-white border-b border-gray-100 px-4 py-3 flex items-center flex-shrink-0">
         <h1 className="text-base font-bold text-gray-800 flex items-center gap-2">
           <i className="ti ti-pig-money text-[#6b8cff]" />
           연금 결산
         </h1>
       </div>
 
-      <div className="bg-white border-b border-gray-100 px-6 py-2 flex items-center gap-3 flex-shrink-0">
+      <div className="bg-white border-b border-gray-100 px-4 py-2 flex items-center gap-2 flex-shrink-0">
         <button onClick={prev}
           className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-700 transition-colors">
           <i className="ti ti-chevron-left text-sm" />
         </button>
-        <span className="text-sm font-semibold text-gray-700 w-28 text-center">
+        <span className="text-sm font-semibold text-gray-700 w-24 text-center">
           {year}년 {month}월
         </span>
         <button onClick={next}
           className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-700 transition-colors">
           <i className="ti ti-chevron-right text-sm" />
         </button>
-        <span className="text-xs text-gray-400 ml-2">말일 기준 납입액 자동 계산 · 평가액 클릭해서 입력</span>
+        <span className="hidden md:inline text-xs text-gray-400 ml-1">말일 기준 납입액 자동 계산 · 평가액 클릭해서 입력</span>
         <button
           onClick={() => {
             const allCollapsed = groupedItems.every(({ grp }) => collapsed[grp])
@@ -267,7 +315,7 @@ export default function PensionPage() {
         </button>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-6">
+      <div className="flex-1 overflow-y-auto p-3 md:p-6">
         <div>
 
           {loading ? (
@@ -279,17 +327,17 @@ export default function PensionPage() {
             </div>
           ) : (
             <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-x-auto">
-              <div className="min-w-[600px]">
+              <div className={isMobile ? '' : 'min-w-[720px]'}>
 
-              <div className="grid text-xs font-semibold text-gray-400 uppercase tracking-wider pl-6 pr-2 py-3 bg-gray-50 border-b border-gray-100"
-                style={{ gridTemplateColumns: COLS }}>
+              <div className={`grid text-xs font-semibold text-gray-400 uppercase tracking-wider ${px} py-3 bg-gray-50 border-b border-gray-100`}
+                style={{ gridTemplateColumns: cols }}>
                 <span>항목</span>
-                <span className="text-right">납입액 (누적)</span>
+                <span className="text-right">{isMobile ? '납입액' : '납입액 (누적)'}</span>
                 <span className="text-right">평가액</span>
-                <span className="text-right">평가손익</span>
-                <span className="text-right">수익률</span>
-                <span className="text-right">비중</span>
-                <span className="pl-12 text-center">순위</span>
+                {!isMobile && <span className="text-right">평가손익</span>}
+                {!isMobile && <span className="text-right">수익률</span>}
+                {!isMobile && <span className="text-right">비중</span>}
+                {!isMobile && <span className="pl-12 text-center">순위</span>}
               </div>
 
               {groupedItems.map(({ grp, rows }) => {
@@ -299,19 +347,34 @@ export default function PensionPage() {
                   <div key={grp}>
                     <button
                       onClick={() => toggleGroup(grp)}
-                      className="w-full grid items-center pl-6 pr-2 py-2.5 bg-gray-50 hover:bg-gray-100 border-b border-gray-100 transition-colors text-left"
-                      style={{ gridTemplateColumns: COLS }}>
-                      <div className="flex items-center gap-1.5">
-                        <i className={`ti ${isOpen ? 'ti-chevron-down' : 'ti-chevron-right'} text-[11px] text-gray-400`} />
-                        <span className="text-sm font-semibold text-gray-600">{grp}</span>
-                        <span className="text-xs text-gray-400">({rows.length})</span>
+                      className={`w-full grid items-center ${px} py-2.5 bg-gray-50 hover:bg-gray-100 border-b border-gray-100 transition-colors text-left`}
+                      style={{ gridTemplateColumns: cols }}>
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <i className={`ti ${isOpen ? 'ti-chevron-down' : 'ti-chevron-right'} text-[11px] text-gray-400 flex-shrink-0`} />
+                        <span className="text-sm font-semibold text-gray-600 truncate">{grp}</span>
+                        <span className="text-xs text-gray-400 flex-shrink-0">({rows.length})</span>
                       </div>
-                      <span className="text-sm font-semibold text-gray-600 tabular-nums text-right whitespace-nowrap">{fmt(t.납)}</span>
-                      <span className="text-sm font-semibold text-gray-600 tabular-nums text-right whitespace-nowrap">{t.평 > 0 ? fmt(t.평) : '-'}</span>
-                      <span className={`text-sm font-semibold tabular-nums text-right whitespace-nowrap ${rateColor(t.손익)}`}>{fmtPnl(t.손익)}</span>
-                      <span className={`text-sm font-semibold tabular-nums text-right whitespace-nowrap ${rateColor(t.율)}`}>{fmtRate(t.율)}</span>
-                      <span className="text-sm font-semibold text-gray-500 tabular-nums text-right whitespace-nowrap">{fmtPct(t.비중)}</span>
-                      <span />
+                      <span className={`text-sm font-semibold text-gray-600 tabular-nums text-right whitespace-nowrap ${isMobile ? 'px-2' : ''}`}>
+                        {fmt(t.납)}
+                      </span>
+                      {isMobile ? (
+                        <div className="flex flex-col items-end gap-0.5">
+                          <span className="text-sm font-semibold text-gray-600 tabular-nums whitespace-nowrap">
+                            {t.평 > 0 ? fmt(t.평) : '-'}
+                          </span>
+                          {t.율 !== null && (
+                            <span className={`text-xs tabular-nums ${rateColor(t.율)}`}>{fmtRate(t.율)}</span>
+                          )}
+                        </div>
+                      ) : (
+                        <>
+                          <span className="text-sm font-semibold text-gray-600 tabular-nums text-right whitespace-nowrap">{t.평 > 0 ? fmt(t.평) : '-'}</span>
+                          <span className={`text-sm font-semibold tabular-nums text-right whitespace-nowrap ${rateColor(t.손익)}`}>{fmtPnl(t.손익)}</span>
+                          <span className={`text-sm font-semibold tabular-nums text-right whitespace-nowrap ${rateColor(t.율)}`}>{fmtRate(t.율)}</span>
+                          <span className="text-sm font-semibold text-gray-500 tabular-nums text-right whitespace-nowrap">{fmtPct(t.비중)}</span>
+                          <span />
+                        </>
+                      )}
                     </button>
                     {isOpen && rows.map(item => renderItemRow(item, true))}
                   </div>
@@ -320,19 +383,36 @@ export default function PensionPage() {
 
               {ungrouped.map(item => renderItemRow(item, false))}
 
-              <div className="grid items-center pl-6 pr-2 py-4 bg-[#1a1f2e] font-semibold"
-                style={{ gridTemplateColumns: COLS }}>
+              <div className={`grid items-center ${px} py-4 bg-[#1a1f2e] font-semibold`}
+                style={{ gridTemplateColumns: cols }}>
                 <span className="text-sm text-white/70">합계</span>
-                <span className="text-sm text-white tabular-nums text-right whitespace-nowrap">{fmt(total납입액)}</span>
-                <span className="text-sm text-white tabular-nums text-right whitespace-nowrap">{total평가액 > 0 ? fmt(total평가액) : '-'}</span>
-                <span className={`text-sm tabular-nums text-right font-semibold whitespace-nowrap ${total손익 === null ? 'text-white/30' : total손익 === 0 ? 'text-white' : total손익 > 0 ? 'text-red-400' : 'text-blue-400'}`}>
-                  {fmtPnl(total손익)}
+                <span className={`text-sm text-white tabular-nums text-right whitespace-nowrap ${isMobile ? 'px-2' : ''}`}>
+                  {fmt(total납입액)}
                 </span>
-                <span className={`text-sm tabular-nums text-right font-semibold whitespace-nowrap ${total수익률 === null ? 'text-white/30' : total수익률 === 0 ? 'text-white' : total수익률 > 0 ? 'text-red-400' : 'text-blue-400'}`}>
-                  {fmtRate(total수익률)}
-                </span>
-                <span className="text-sm text-white/50 text-right whitespace-nowrap">100%</span>
-                <span />
+                {isMobile ? (
+                  <div className="flex flex-col items-end gap-0.5">
+                    <span className="text-sm text-white tabular-nums whitespace-nowrap">
+                      {total평가액 > 0 ? fmt(total평가액) : '-'}
+                    </span>
+                    {total수익률 !== null && (
+                      <span className={`text-xs tabular-nums ${total수익률 === 0 ? 'text-white' : total수익률 > 0 ? 'text-red-400' : 'text-blue-400'}`}>
+                        {fmtRate(total수익률)}
+                      </span>
+                    )}
+                  </div>
+                ) : (
+                  <>
+                    <span className="text-sm text-white tabular-nums text-right whitespace-nowrap">{total평가액 > 0 ? fmt(total평가액) : '-'}</span>
+                    <span className={`text-sm tabular-nums text-right font-semibold whitespace-nowrap ${total손익 === null ? 'text-white/30' : total손익 === 0 ? 'text-white' : total손익 > 0 ? 'text-red-400' : 'text-blue-400'}`}>
+                      {fmtPnl(total손익)}
+                    </span>
+                    <span className={`text-sm tabular-nums text-right font-semibold whitespace-nowrap ${total수익률 === null ? 'text-white/30' : total수익률 === 0 ? 'text-white' : total수익률 > 0 ? 'text-red-400' : 'text-blue-400'}`}>
+                      {fmtRate(total수익률)}
+                    </span>
+                    <span className="text-sm text-white/50 text-right whitespace-nowrap">100%</span>
+                    <span />
+                  </>
+                )}
               </div>
 
               </div>

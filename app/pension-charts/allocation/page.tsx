@@ -78,6 +78,7 @@ export default function PensionAllocationPage() {
   const [pensionSid,    setPensionSid]    = useState<number | null>(null)
   const [items,         setItems]         = useState<PensionItem[]>([])
   const [loading,       setLoading]       = useState(false)
+  const [isMobile,      setIsMobile]      = useState(false)
 
   useEffect(() => {
     fetch('/api/sessions').then(r => r.json()).then(d => {
@@ -96,6 +97,13 @@ export default function PensionAllocationPage() {
       .then(d => setItems(d.items ?? []))
       .finally(() => setLoading(false))
   }, [pensionSid, selectedYear, selectedMonth])
+
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 768)
+    check()
+    window.addEventListener('resize', check)
+    return () => window.removeEventListener('resize', check)
+  }, [])
 
   // 직접투자 연금 항목만 필터 (퇴직금·보험사연금 그룹 제외, 평가 데이터 있는 것만)
   const directItems = items.filter(
@@ -131,17 +139,21 @@ export default function PensionAllocationPage() {
   const yearOptions: number[] = []
   for (let y = today.getFullYear(); y >= 2020; y--) yearOptions.push(y)
 
+  const pieSize = isMobile ? 120 : 160
+  const innerR  = isMobile ? 32  : 42
+  const outerR  = isMobile ? 54  : 72
+
   return (
     <div className="flex flex-col h-full bg-gray-50">
 
       {/* 헤더 */}
-      <div className="bg-white border-b border-gray-100 px-6 py-3 flex items-center gap-4 flex-shrink-0">
-        <h1 className="text-base font-bold text-gray-800 flex items-center gap-2">
+      <div className="bg-white border-b border-gray-100 px-4 py-3 flex items-center gap-2 flex-shrink-0">
+        <h1 className="text-base font-bold text-gray-800 flex items-center gap-2 flex-shrink-0 whitespace-nowrap">
           <i className="ti ti-chart-donut text-[#6b8cff]" />
           직접투자 비중
         </h1>
 
-        <div className="flex items-center gap-2 ml-4">
+        <div className="flex items-center gap-2 ml-2">
           <select
             value={selectedYear}
             onChange={e => setSelectedYear(Number(e.target.value))}
@@ -162,7 +174,7 @@ export default function PensionAllocationPage() {
       </div>
 
       {/* 본문 */}
-      <div className="flex-1 overflow-y-auto p-6">
+      <div className="flex-1 overflow-y-auto p-3 md:p-6">
         {loading ? (
           <div className="flex items-center justify-center h-40 text-gray-300 text-sm">불러오는 중…</div>
         ) : !pensionSid ? (
@@ -179,7 +191,7 @@ export default function PensionAllocationPage() {
           <div className="space-y-5">
 
             {/* 전체 비율 도넛 차트 */}
-            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 md:p-5">
               <div className="text-sm font-bold text-gray-800 mb-4 flex items-center gap-2">
                 <i className="ti ti-chart-donut text-[#6b8cff]" />
                 직접투자 연금 자산군별 비중
@@ -239,7 +251,7 @@ export default function PensionAllocationPage() {
               {categoryData.map(c => {
                 const catTotal = c.value
                 return (
-                  <div key={c.name} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+                  <div key={c.name} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 md:p-5">
                     <div className="flex items-center justify-between mb-3">
                       <span className="text-sm font-bold text-gray-800 flex items-center gap-2">
                         <span className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: c.color }} />
@@ -255,14 +267,14 @@ export default function PensionAllocationPage() {
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-4">
-                      <PieChart width={160} height={160} style={{ flexShrink: 0 }}>
+                    <div className={`flex items-center ${isMobile ? 'gap-2' : 'gap-4'}`}>
+                      <PieChart width={pieSize} height={pieSize} style={{ flexShrink: 0 }}>
                         <Pie
                           data={c.items}
                           cx="50%"
                           cy="50%"
-                          innerRadius={42}
-                          outerRadius={72}
+                          innerRadius={innerR}
+                          outerRadius={outerR}
                           dataKey="평가액"
                           nameKey="name"
                           paddingAngle={c.items.length > 1 ? 2 : 0}
@@ -277,26 +289,35 @@ export default function PensionAllocationPage() {
                         />
                       </PieChart>
 
-                      <div className="flex-1 space-y-2">
+                      <div className="flex-1 min-w-0 space-y-2">
                         {c.items.map((item, i) => {
                           const pct = catTotal > 0 ? (item.평가액 / catTotal) * 100 : 0
                           const totalPct = total평가액 > 0 ? (item.평가액 / total평가액) * 100 : 0
                           return (
-                            <div key={item.name} className="flex items-center gap-2">
+                            <div key={item.name} className="flex items-center gap-1.5 min-w-0">
                               <span
                                 className="w-2 h-2 rounded-full flex-shrink-0"
                                 style={{ backgroundColor: ITEM_PALETTE[i % ITEM_PALETTE.length] }}
                               />
-                              <span className="text-xs text-gray-600 flex-1 truncate" title={item.name}>{item.name}</span>
+                              <span className="text-xs text-gray-600 flex-1 min-w-0 truncate" title={item.name}>{item.name}</span>
                               <span className="text-xs text-gray-500 w-20 text-right flex-shrink-0">{fmt(item.평가액)}</span>
-                              <span className="text-xs text-gray-400 w-10 text-right flex-shrink-0">{pct.toFixed(1)}%</span>
-                              <span className="text-xs font-semibold text-gray-600 w-10 text-right flex-shrink-0">{totalPct.toFixed(1)}%</span>
+                              {!isMobile && (
+                                <>
+                                  <span className="text-xs text-gray-400 w-10 text-right flex-shrink-0">{pct.toFixed(1)}%</span>
+                                  <span className="text-xs font-semibold text-gray-600 w-10 text-right flex-shrink-0">{totalPct.toFixed(1)}%</span>
+                                </>
+                              )}
+                              {isMobile && (
+                                <span className="text-xs text-gray-400 w-9 text-right flex-shrink-0">{pct.toFixed(1)}%</span>
+                              )}
                             </div>
                           )
                         })}
                         {c.items.length > 1 && (
                           <div className="pt-1 border-t border-gray-100 flex items-center justify-between">
-                            <span className="text-[10px] text-gray-300">금액 / 군내비중 / 전체비중</span>
+                            <span className="text-[10px] text-gray-300">
+                              {isMobile ? '금액 / 군내비중' : '금액 / 군내비중 / 전체비중'}
+                            </span>
                           </div>
                         )}
                       </div>

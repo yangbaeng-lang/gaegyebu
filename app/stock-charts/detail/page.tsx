@@ -95,15 +95,15 @@ export default function StockDetailPage() {
     <div className="flex flex-col h-full bg-gray-50">
 
       {/* 헤더 */}
-      <div className="bg-white border-b border-gray-100 px-6 py-3 flex items-center gap-4 flex-shrink-0">
-        <h1 className="text-base font-bold text-gray-800 flex items-center gap-2">
+      <div className="bg-white border-b border-gray-100 px-4 py-3 flex items-center gap-2 flex-shrink-0">
+        <h1 className="text-base font-bold text-gray-800 flex items-center gap-2 flex-shrink-0 whitespace-nowrap">
           <i className="ti ti-chart-histogram text-[#22c55e]" />
           세부내역 차트
         </h1>
-        <div className="flex items-center gap-1 ml-4">
+        <div className="flex items-center gap-1 overflow-x-auto scrollbar-hide flex-1 min-w-0">
           {yearOptions.map(y => (
             <button key={y} onClick={() => setSelectedYear(y)}
-              className={`px-3 py-1 rounded-lg text-sm font-semibold transition-colors ${
+              className={`px-3 py-1 rounded-lg text-sm font-semibold transition-colors flex-shrink-0 ${
                 selectedYear === y
                   ? 'bg-[#22c55e] text-white'
                   : 'text-gray-400 hover:bg-gray-100 hover:text-gray-700'
