@@ -176,7 +176,7 @@ export default function PensionAllocationPage() {
             <p className="text-sm">{selectedYear}년 {selectedMonth}월 평가 데이터가 없습니다</p>
           </div>
         ) : (
-          <div className="max-w-6xl mx-auto space-y-5">
+          <div className="space-y-5">
 
             {/* 전체 비율 도넛 차트 */}
             <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">

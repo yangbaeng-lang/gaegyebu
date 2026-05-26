@@ -201,7 +201,7 @@ export default function HistoryPage() {
         month={period.month} setMonth={period.setMonth}
         prev={period.prev} next={period.next} />
 
-      <div className="flex-1 overflow-y-auto p-4 space-y-3 max-w-[1080px] w-full mx-auto">
+      <div className="flex-1 overflow-y-auto p-4 space-y-3">
         {/* KPI */}
         <div className="grid grid-cols-4 gap-2">
           {[

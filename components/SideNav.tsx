@@ -202,6 +202,24 @@ export default function SideNav() {
           <i className="ti ti-chart-bar text-base w-4 flex-shrink-0" />
           <span className="font-semibold">연금 차트</span>
         </Link>
+        <Link href="/stock"
+          className={`flex items-center gap-2.5 px-3 py-2 mx-2 rounded-lg text-base transition-colors
+            ${pathname === '/stock'
+              ? 'text-white bg-[#6b8cff]'
+              : 'text-white hover:bg-white/[0.08]'
+            }`}>
+          <i className="ti ti-trending-up text-base w-4 flex-shrink-0" />
+          <span className="font-semibold">주식 결산</span>
+        </Link>
+        <Link href="/stock-charts"
+          className={`flex items-center gap-2.5 px-3 py-2 mx-2 rounded-lg text-base transition-colors
+            ${pathname.startsWith('/stock-charts')
+              ? 'text-white bg-[#6b8cff]'
+              : 'text-white hover:bg-white/[0.08]'
+            }`}>
+          <i className="ti ti-chart-histogram text-base w-4 flex-shrink-0" />
+          <span className="font-semibold">주식 차트</span>
+        </Link>
         <Link href="/overview"
           className={`flex items-center gap-2.5 px-3 py-2 mx-2 rounded-lg text-base transition-colors
             ${pathname === '/overview'

@@ -29,7 +29,14 @@
       "Bash(Get-Content \"f:\\\\One Drive\\\\OneDrive - SK Hynix Inc\\\\AI 작업폴더\\\\가계부 홈페이지 제작\\\\prisma\\\\migrations\\\\20260507052839_init\\\\migration.sql\")",
       "Bash(Remove-Item -Path \"f:\\\\One Drive\\\\OneDrive - SK Hynix Inc\\\\AI 작업폴더\\\\가계부 홈페이지 제작\\\\app\\\\api\\\\overview\\\\session-assets\\\\route.ts\" -Force)",
       "Bash(Remove-Item -Path \"f:\\\\One Drive\\\\OneDrive - SK Hynix Inc\\\\AI 작업폴더\\\\가계부 홈페이지 제작\\\\app\\\\api\\\\overview\\\\session-assets\" -Force)",
-      "Bash(sqlite3 gaegyebu.db \"SELECT b.id, s.name as session_name, b.category, b.yearMonth, b.amount FROM budget b JOIN session s ON b.sessionId = s.id WHERE b.yearMonth = '2026-12' ORDER BY s.name, b.category;\")"
+      "Bash(sqlite3 gaegyebu.db \"SELECT b.id, s.name as session_name, b.category, b.yearMonth, b.amount FROM budget b JOIN session s ON b.sessionId = s.id WHERE b.yearMonth = '2026-12' ORDER BY s.name, b.category;\")",
+      "Bash(npx playwright *)",
+      "Read(//c/Users/양병훈/AppData/Local/Temp/**)",
+      "Bash(for page in \"journal\" \"analytics\" \"budget\" \"charts\" \"overview\" \"assets\" \"sections\" \"performance\" \"settings\" \"history\"; do *)",
+      "Read(//f/One Drive/OneDrive - SK Hynix Inc/AI 작업폴더/가계부 홈페이지 제작/app$page/**)",
+      "Bash(Get-Content \"f:\\\\One Drive\\\\OneDrive - SK Hynix Inc\\\\AI 작업폴더\\\\가계부 홈페이지 제작\\\\app\\\\journal\\\\page.tsx\")",
+      "Bash(Select-Object -First 30)",
+      "Bash(Get-ChildItem -Recurse app/stock, app/stock-charts)"
     ],
     "additionalDirectories": [
       "f:\\One Drive\\OneDrive - SK Hynix Inc\\AI 작업폴더\\가계부 홈페이지 제작\\app\\api\\sessions"

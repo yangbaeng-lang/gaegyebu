@@ -374,7 +374,7 @@ export default function JournalPage() {
 
         {/* ── 거래내역 메인 ─────────────────────────────────── */}
         <div className="flex-1 overflow-y-auto p-4">
-          <div className="max-w-[1080px] mx-auto space-y-3">
+          <div className="space-y-3">
 
             {/* KPI */}
             <div className="grid grid-cols-4 gap-2">

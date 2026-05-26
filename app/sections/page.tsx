@@ -61,6 +61,25 @@ export default function SectionsPage() {
   const [importTargetSid, setImportTargetSid] = useState<number | null>(null)
   const [selectedImportSid, setSelectedImportSid] = useState<number | null>(null)
   const [settingsModal, setSettingsModal] = useState<{ id: number; name: string; decimalPlaces: number; currency: string; exchangeRate: number | null } | null>(null)
+  const [evalTotals, setEvalTotals] = useState<Record<number, number>>({})
+
+  const fetchEvalTotals = (sectionList: SectionSummary[], ym: string) => {
+    const targets = sectionList.filter(s => s.name === '주식' || s.name === '연금')
+    Promise.all(
+      targets.map(s =>
+        fetch(`/api/pension-eval?sessionId=${s.id}&yearMonth=${ym}`)
+          .then(r => r.json())
+          .then((d: { items?: { 평가액: number; hasEval: boolean }[] }) => ({
+            id: s.id,
+            total: (d.items ?? []).filter(i => i.hasEval).reduce((sum, i) => sum + i.평가액, 0),
+          }))
+      )
+    ).then(results => {
+      const map: Record<number, number> = {}
+      results.forEach(r => { map[r.id] = r.total })
+      setEvalTotals(map)
+    })
+  }
 
   const fetchData = (dateTo: string) =>
     Promise.all([
@@ -70,6 +89,7 @@ export default function SectionsPage() {
       setSections(summary)
       setCurrentSid(sessions.current ?? 1)
       setLoading(false)
+      fetchEvalTotals(summary, dateTo.substring(0, 7))
     })
 
   useEffect(() => { fetchData(period.dateTo) }, [period.dateTo])
@@ -243,6 +263,13 @@ export default function SectionsPage() {
   const totalLiab   = sections.reduce((acc, s) => acc + s.totalLiab   * toKRW(s), 0)
   const totalNet    = sections.reduce((acc, s) => acc + s.netWorth     * toKRW(s), 0)
 
+  const hasAnyEval = sections.some(s => (evalTotals[s.id] ?? 0) > 0)
+  const totalNetWithEval = sections.reduce((acc, s) => {
+    const eval_ = evalTotals[s.id]
+    if (eval_ !== undefined && eval_ > 0) return acc + eval_
+    return acc + s.netWorth * toKRW(s)
+  }, 0)
+
   return (
     <div className="flex flex-col h-full">
       {/* 헤더 */}
@@ -273,7 +300,7 @@ export default function SectionsPage() {
       />
 
       <div className="flex-1 overflow-y-auto p-5">
-        <div className="max-w-[1080px] mx-auto space-y-4">
+        <div className="space-y-4">
 
           {/* Import 결과 */}
           {importResult && (
@@ -304,7 +331,14 @@ export default function SectionsPage() {
                   <p className="text-[15px] font-semibold text-[#ff7070] tabular-nums">{fmt(totalLiab)}</p>
                 </div>
                 <div className="flex items-center justify-end">
-                  <p className={`text-[15px] font-semibold tabular-nums ${totalNet >= 0 ? 'text-[#4fe8a0]' : 'text-[#ff7070]'}`}>{fmt(totalNet)}</p>
+                  <div className="text-right">
+                    <p className={`text-[15px] font-semibold tabular-nums ${totalNet >= 0 ? 'text-[#4fe8a0]' : 'text-[#ff7070]'}`}>{fmt(totalNet)}</p>
+                    {hasAnyEval && (
+                      <p className={`text-[11px] tabular-nums mt-0.5 ${totalNetWithEval >= 0 ? 'text-[#a5f3d0]' : 'text-[#ffb3b3]'}`}>
+                        평가 포함 {fmt(totalNetWithEval)}
+                      </p>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
@@ -374,6 +408,11 @@ export default function SectionsPage() {
                         <div className="text-right">
                           <p className={`text-[15px] font-semibold tabular-nums ${s.netWorth >= 0 ? 'text-[#2a9d5c]' : 'text-[#d94f4f]'}`}>{a.usd ?? a.krw}</p>
                           {a.usd && a.krw && <p className="text-[11px] text-gray-400 tabular-nums">≈{a.krw}</p>}
+                          {evalTotals[s.id] !== undefined && evalTotals[s.id] > 0 && (
+                            <p className="text-[11px] text-[#6b8cff] tabular-nums mt-0.5">
+                              평가 {fmt(evalTotals[s.id])}
+                            </p>
+                          )}
                         </div>
                       )})()}
                       <button

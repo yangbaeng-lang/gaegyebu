@@ -388,11 +388,10 @@ export default function InsertPage() {
 
       {/* 전체 스크롤 */}
       <div className="flex-1 overflow-y-auto p-4">
-        <div className="max-w-[1080px] mx-auto space-y-4">
 
           {/* 빠른 입력 */}
           {quickTxs.length > 0 && (
-            <div className="bg-white border border-gray-100 rounded-xl px-3 py-2.5 flex items-center gap-2 flex-wrap">
+            <div className="mb-4 bg-white border border-gray-100 rounded-xl px-3 py-2.5 flex items-center gap-2 flex-wrap">
               {sortedQuickTxs.map(q => (
                 <div key={q.id} className="group/q relative flex-shrink-0">
                   <button
@@ -424,8 +423,8 @@ export default function InsertPage() {
             </div>
           )}
 
-          {/* 5열 입력 영역 — 항목 모두 펼침, 스크롤 없음 */}
-          <div className="flex flex-col md:flex-row border border-gray-100 bg-white rounded-xl overflow-hidden">
+          {/* 5열 입력 영역 — 전체 너비, 여백 없음 */}
+          <div className="-mx-4 flex flex-col md:flex-row border-y border-gray-100 bg-white overflow-hidden mb-4">
 
             {/* ① 날짜 */}
             <div className="md:w-40 md:flex-shrink-0 border-b border-gray-100 md:border-b-0 md:border-r flex flex-col">
@@ -438,7 +437,7 @@ export default function InsertPage() {
             </div>
 
             {/* ② 내용 */}
-            <div className="md:w-40 md:flex-shrink-0 border-b border-gray-100 md:border-b-0 md:border-r flex flex-col">
+            <div className="md:w-64 md:flex-shrink-0 border-b border-gray-100 md:border-b-0 md:border-r flex flex-col">
               <ColHeader label="내용" />
               <div className="p-3 flex flex-col gap-2">
                 <div className="relative">
@@ -519,11 +518,11 @@ export default function InsertPage() {
               <span className="text-[10px] text-gray-400">{txs.length}건</span>
             </div>
             <div className="grid text-[10px] font-medium text-gray-400 px-4 py-1 border-b border-gray-100 bg-gray-50"
-              style={{ gridTemplateColumns: '80px 1fr 100px 120px 120px 80px' }}>
+              style={{ gridTemplateColumns: '90px 1.2fr 110px 1fr 1fr 80px' }}>
               <span>날짜</span>
-              <span>내용</span>
+              <span className="pl-8">내용</span>
               <span className="text-right">금액</span>
-              <span className="pl-2">출금</span>
+              <span className="pl-8">출금</span>
               <span className="pl-2">입금</span>
               <span className="text-center">유형</span>
             </div>
@@ -534,15 +533,15 @@ export default function InsertPage() {
             ) : sortedTxs.map(tx => (
               <div key={tx.id}
                 className="grid items-center px-4 py-1.5 border-b border-gray-50 hover:bg-gray-50 group text-xs"
-                style={{ gridTemplateColumns: '80px 1fr 100px 120px 120px 80px' }}>
+                style={{ gridTemplateColumns: '90px 1.2fr 110px 1fr 1fr 80px' }}>
                 <span className="text-gray-400 text-[11px]">{tx.date.slice(5).replace('-', '/')} ({DOW[new Date(tx.date).getDay()]})</span>
-                <span className="text-gray-800 font-medium truncate pr-2">{tx.desc}
+                <span className="pl-8 text-gray-800 font-medium truncate pr-2">{tx.desc}
                   {tx.memo && <span className="text-gray-400 font-normal ml-1.5 text-[10px]">{tx.memo}</span>}
                 </span>
                 <span className="text-right font-medium" style={{ color: TYPE_COLOR[tx.type] }}>
                   {tx.type === 'expense' ? '−' : tx.type === 'income' ? (tx.amount >= 0 ? '+' : '') : tx.type === 'income_expense' ? '±' : ''}{tx.amount.toLocaleString()}원
                 </span>
-                <span className="text-gray-500 text-[11px] pl-2 truncate">{tx.fromAcct}</span>
+                <span className="text-gray-500 text-[11px] pl-8 truncate">{tx.fromAcct}</span>
                 <span className="text-gray-500 text-[11px] pl-2 truncate">{tx.toAcct}</span>
                 <div className="flex items-center justify-center gap-1">
                   <span className="text-[10px] px-1.5 py-0.5 rounded-full"
@@ -562,7 +561,6 @@ export default function InsertPage() {
             ))}
           </div>
 
-        </div>
       </div>
 
 

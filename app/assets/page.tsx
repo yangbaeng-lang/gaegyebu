@@ -287,7 +287,7 @@ export default function AssetsPage() {
 
         {/* ── 자산/부채 메인 ───────────────────────────────── */}
         <div className="flex-1 overflow-y-auto p-4">
-          <div className="max-w-[1080px] mx-auto space-y-3">
+          <div className="space-y-3">
 
             {/* 순자산 배너 */}
             <div className="bg-[#1a1f2e] rounded-2xl p-4">

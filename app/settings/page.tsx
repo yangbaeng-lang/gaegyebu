@@ -506,7 +506,7 @@ export default function SettingsPage() {
       </div>
 
       <div className="flex-1 overflow-y-auto p-5">
-        <div className="max-w-[1080px] mx-auto space-y-6">
+        <div className="space-y-6">
           {SECTIONS.map(sec => (
             <div key={sec.groupLabel}>
               <div className="flex items-center gap-2 mb-2 px-1">

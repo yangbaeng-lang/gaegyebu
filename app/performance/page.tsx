@@ -248,7 +248,7 @@ export default function PerformancePage() {
   return (
     <div className="flex flex-col h-full bg-[#1a1f2e]">
       <div className="flex-1 overflow-y-auto p-4 md:p-6">
-      <div className="max-w-5xl mx-auto space-y-5">
+      <div className="space-y-5">
 
         {/* 헤더 */}
         <div className="flex items-center justify-between">

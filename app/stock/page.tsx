@@ -2,7 +2,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { fmt } from '@/lib/utils'
 
-type PensionItem = {
+type StockItem = {
   name: string
   color: string
   icon: string
@@ -35,13 +35,13 @@ function fmtPnl(v: number | null) {
 
 const COLS = '3fr 1.5fr 1.7fr 1.5fr 1fr 0.8fr 0.6fr'
 
-export default function PensionPage() {
+export default function StockPage() {
   const today = new Date()
   const [year,  setYear]  = useState(today.getFullYear())
   const [month, setMonth] = useState(today.getMonth() + 1)
 
-  const [pensionSid,  setPensionSid]  = useState<number | null>(null)
-  const [items,       setItems]       = useState<PensionItem[]>([])
+  const [stockSid,    setStockSid]    = useState<number | null>(null)
+  const [items,       setItems]       = useState<StockItem[]>([])
   const [groupOrder,  setGroupOrder]  = useState<string[]>([])
   const [loading,     setLoading]     = useState(false)
   const [collapsed,   setCollapsed]   = useState<Record<string, boolean>>({})
@@ -60,17 +60,17 @@ export default function PensionPage() {
   useEffect(() => {
     fetch('/api/sessions').then(r => r.json()).then(d => {
       const list: { id: number; name: string }[] = d.sessions ?? []
-      const pension = list.find(s => s.name === '연금')
-      setPensionSid(pension?.id ?? null)
+      const stock = list.find(s => s.name === '주식')
+      setStockSid(stock?.id ?? null)
     })
   }, [])
 
   useEffect(() => {
-    if (!pensionSid) return
+    if (!stockSid) return
     setLoading(true)
-    reload(pensionSid).finally(() => setLoading(false))
+    reload(stockSid).finally(() => setLoading(false))
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pensionSid, yearMonth])
+  }, [stockSid, yearMonth])
 
   useEffect(() => {
     if (editingName) inputRef.current?.focus()
@@ -84,27 +84,27 @@ export default function PensionPage() {
   }
 
   const saveEval = async (name: string, val: string) => {
-    if (!pensionSid) return
+    if (!stockSid) return
     const evalAmount = Number(val.replace(/[^0-9]/g, '')) || 0
     setEditingName(null)
     await fetch('/api/pension-eval', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ sessionId: pensionSid, assetName: name, yearMonth, evalAmount }),
+      body: JSON.stringify({ sessionId: stockSid, assetName: name, yearMonth, evalAmount }),
     })
     showToast('저장됐습니다 ✓')
-    reload(pensionSid)
+    reload(stockSid)
   }
 
-  const copyNapip = async (item: PensionItem) => {
-    if (!pensionSid || item.납입액 === 0) return
+  const copyNapip = async (item: StockItem) => {
+    if (!stockSid || item.납입액 === 0) return
     await fetch('/api/pension-eval', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ sessionId: pensionSid, assetName: item.name, yearMonth, evalAmount: item.납입액 }),
+      body: JSON.stringify({ sessionId: stockSid, assetName: item.name, yearMonth, evalAmount: item.납입액 }),
     })
-    showToast('납입액으로 저장됐습니다 ✓')
-    reload(pensionSid)
+    showToast('매수금액으로 저장됐습니다 ✓')
+    reload(stockSid)
   }
 
   const prev = () => { if (month === 1) { setYear(y => y - 1); setMonth(12) } else setMonth(m => m - 1) }
@@ -132,7 +132,7 @@ export default function PensionPage() {
     .sort((a, b) => (b.수익률 ?? 0) - (a.수익률 ?? 0))
   ranked.forEach((item, idx) => { rankMap[item.name] = idx + 1 })
 
-  const grpTotals = (rows: PensionItem[]) => {
+  const grpTotals = (rows: StockItem[]) => {
     const 납 = rows.reduce((s, i) => s + i.납입액, 0)
     const 평 = rows.reduce((s, i) => s + i.평가액, 0)
     const 손익 = 평 > 0 ? 평 - 납 : null
@@ -141,7 +141,7 @@ export default function PensionPage() {
     return { 납, 평, 손익, 율, 비중 }
   }
 
-  const renderItemRow = (item: PensionItem, indent = false) => {
+  const renderItemRow = (item: StockItem, indent = false) => {
     const isEditing = editingName === item.name
     return (
       <div key={item.name}
@@ -150,9 +150,9 @@ export default function PensionPage() {
 
         <div className={`flex items-center gap-2.5 ${indent ? 'pl-5' : ''}`}>
           <div className="w-6 h-6 rounded-md flex items-center justify-center flex-shrink-0"
-            style={{ background: (item.color || '#6b8cff') + '20' }}>
-            <i className={`ti ${item.icon || 'ti-pig-money'} text-xs`}
-              style={{ color: item.color || '#6b8cff' }} />
+            style={{ background: (item.color || '#22c55e') + '20' }}>
+            <i className={`ti ${item.icon || 'ti-trending-up'} text-xs`}
+              style={{ color: item.color || '#22c55e' }} />
           </div>
           <span className="text-sm text-gray-700 truncate">{item.name}</span>
         </div>
@@ -178,7 +178,7 @@ export default function PensionPage() {
             <>
               {item.납입액 !== 0 && (
                 <button
-                  title="납입액과 동일하게 설정"
+                  title="매수금액과 동일하게 설정"
                   onClick={() => copyNapip(item)}
                   className="opacity-0 group-hover:opacity-100 transition-opacity w-5 h-5 flex items-center justify-center rounded text-gray-300 hover:text-blue-500 hover:bg-blue-50 flex-shrink-0">
                   <i className="ti ti-copy text-[11px]" />
@@ -234,8 +234,8 @@ export default function PensionPage() {
 
       <div className="bg-white border-b border-gray-100 px-6 py-3 flex items-center flex-shrink-0">
         <h1 className="text-base font-bold text-gray-800 flex items-center gap-2">
-          <i className="ti ti-pig-money text-[#6b8cff]" />
-          연금 결산
+          <i className="ti ti-trending-up text-[#22c55e]" />
+          주식 결산
         </h1>
       </div>
 
@@ -251,7 +251,7 @@ export default function PensionPage() {
           className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-700 transition-colors">
           <i className="ti ti-chevron-right text-sm" />
         </button>
-        <span className="text-xs text-gray-400 ml-2">말일 기준 납입액 자동 계산 · 평가액 클릭해서 입력</span>
+        <span className="text-xs text-gray-400 ml-2">말일 기준 매수금액 자동 계산 · 평가금액 클릭해서 입력</span>
         <button
           onClick={() => {
             const allCollapsed = groupedItems.every(({ grp }) => collapsed[grp])
@@ -272,10 +272,10 @@ export default function PensionPage() {
 
           {loading ? (
             <div className="flex items-center justify-center h-40 text-gray-300 text-sm">불러오는 중…</div>
-          ) : !pensionSid ? (
+          ) : !stockSid ? (
             <div className="flex flex-col items-center justify-center h-40 gap-2 text-gray-300">
-              <i className="ti ti-pig-money text-3xl" />
-              <p className="text-sm">"연금" 섹션이 없습니다</p>
+              <i className="ti ti-trending-up text-3xl" />
+              <p className="text-sm">"주식" 섹션이 없습니다</p>
             </div>
           ) : (
             <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-x-auto">
@@ -284,8 +284,8 @@ export default function PensionPage() {
               <div className="grid text-xs font-semibold text-gray-400 uppercase tracking-wider pl-6 pr-2 py-3 bg-gray-50 border-b border-gray-100"
                 style={{ gridTemplateColumns: COLS }}>
                 <span>항목</span>
-                <span className="text-right">납입액 (누적)</span>
-                <span className="text-right">평가액</span>
+                <span className="text-right">매수금액 (누적)</span>
+                <span className="text-right">평가금액</span>
                 <span className="text-right">평가손익</span>
                 <span className="text-right">수익률</span>
                 <span className="text-right">비중</span>

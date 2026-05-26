@@ -302,7 +302,7 @@ export default function AnalyticsPage() {
 
         {/* ── 보고서 메인 ───────────────────────────────── */}
         <div className="flex-1 overflow-y-auto p-4">
-          <div className="max-w-[1080px] mx-auto space-y-4">
+          <div className="space-y-4">
 
             {/* KPI */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
