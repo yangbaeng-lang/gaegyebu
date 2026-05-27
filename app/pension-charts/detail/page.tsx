@@ -182,8 +182,13 @@ export default function PensionDetailPage() {
   const labelOf = (ym: string) =>
     mode === 'yearly' ? ym : `${ym.slice(2, 4)}.${ym.slice(5)}`
 
+  // 현재 잔액이 0인 자산 제외 (최신 월에 납입액이 없는 항목)
+  const latestActiveEntry = activeMonths[activeMonths.length - 1]
+  const currentAssetNames = new Set(latestActiveEntry?.assets.map(a => a.name) ?? [])
+
   // 자산별 월별 차트 데이터 조합
   const assetCharts = assetOrder.map(summary => {
+    if (!currentAssetNames.has(summary.name)) return null
     const chartData = displayData
       .map(entry => {
         const a = entry.assets.find(a => a.name === summary.name)
