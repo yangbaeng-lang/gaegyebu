@@ -310,13 +310,20 @@ export default function PensionAllocationPage() {
                               {isMobile && (
                                 <span className="text-xs text-gray-400 w-9 text-right flex-shrink-0">{pct.toFixed(1)}%</span>
                               )}
+                              {item.수익률 !== null ? (
+                                <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-md w-14 text-center flex-shrink-0 ${rateBadge(item.수익률)}`}>
+                                  {item.수익률 >= 0 ? '+' : ''}{item.수익률.toFixed(2)}%
+                                </span>
+                              ) : (
+                                <span className="w-14 flex-shrink-0" />
+                              )}
                             </div>
                           )
                         })}
                         {c.items.length > 1 && (
                           <div className="pt-1 border-t border-gray-100 flex items-center justify-between">
                             <span className="text-[10px] text-gray-300">
-                              {isMobile ? '금액 / 군내비중' : '금액 / 군내비중 / 전체비중'}
+                              {isMobile ? '금액 / 군내비중 / 수익률' : '금액 / 군내비중 / 전체비중 / 수익률'}
                             </span>
                           </div>
                         )}
