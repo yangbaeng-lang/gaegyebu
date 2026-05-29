@@ -95,12 +95,15 @@ export default function JournalPage() {
   const [typeFilter, setTypeFilter] = useState<'all' | 'expense' | 'income' | 'transfer'>('all')
   const [q,          setQ]          = useState('')
   const [qInput,     setQInput]     = useState('')
+  const [qScope,     setQScope]     = useState<'all' | 'desc' | 'acct'>('all')
   const [dateFrom,   setDateFrom]   = useState('')
   const [dateTo,     setDateTo]     = useState('')
   const [sortBy,     setSortBy]     = useState('date_desc')
   const [toast,      setToast]      = useState('')
   const [selectedIds,     setSelectedIds]     = useState<Set<number>>(new Set())
   const [mainSelectedIds, setMainSelectedIds] = useState<Set<number>>(new Set())
+  const [bulkEditOpen,    setBulkEditOpen]    = useState(false)
+  const [bulkForm,        setBulkForm]        = useState({ applyDate: false, date: '', applyDesc: false, desc: '', applyFrom: false, fromAcct: '', applyTo: false, toAcct: '', applyAmount: false, amount: 0 })
   const panelMouseDownRef = useRef(false)
   const panelDragStartIdx = useRef(-1)
   const panelLastDragIdx  = useRef(-1)
@@ -250,7 +253,13 @@ export default function JournalPage() {
   const filtered = useMemo(() => {
     const list = entries
       .filter(e => typeFilter === 'all' || e.txType === typeFilter)
-      .filter(e => !q.trim() || e.desc.includes(q.trim()) || e.memo.includes(q.trim()))
+      .filter(e => {
+        const t = q.trim()
+        if (!t) return true
+        if (qScope === 'desc') return e.desc.includes(t) || e.memo.includes(t)
+        if (qScope === 'acct') return e.dr.acctName.includes(t) || e.cr.acctName.includes(t)
+        return e.desc.includes(t) || e.memo.includes(t) || e.dr.acctName.includes(t) || e.cr.acctName.includes(t)
+      })
     switch (sortBy) {
       case 'date_asc':   return [...list].sort((a, b) =>  a.date.localeCompare(b.date) ||  a.txId - b.txId)
       case 'date_desc':  return [...list].sort((a, b) =>  b.date.localeCompare(a.date) ||  b.txId - a.txId)
@@ -333,6 +342,44 @@ export default function JournalPage() {
     }
     setMainSelectedIds(new Set())
     showToast(`${ids.length}건 삭제됐습니다`)
+    fetchTxs()
+  }
+
+  const openBulkEdit = () => {
+    const today = new Date().toISOString().slice(0, 10)
+    setBulkForm({
+      applyDate: false, date: today,
+      applyDesc: false, desc: '',
+      applyFrom: false, fromAcct: cats.account_asset[0] ?? '',
+      applyTo:   false, toAcct:   cats.expense[0]       ?? '',
+      applyAmount: false, amount: 0,
+    })
+    setBulkEditOpen(true)
+  }
+
+  const handleBulkEditSave = async () => {
+    const ids = Array.from(mainSelectedIds)
+    if (ids.length === 0) return
+    const hasAny = bulkForm.applyDate || bulkForm.applyDesc || bulkForm.applyFrom || bulkForm.applyTo || bulkForm.applyAmount
+    if (!hasAny) { showToast('수정할 항목을 선택해주세요'); return }
+    await Promise.all(ids.map(id => {
+      const tx = txs.find(t => t.id === id)
+      if (!tx) return Promise.resolve()
+      const updated = { ...tx,
+        ...(bulkForm.applyDate   ? { date:     bulkForm.date     } : {}),
+        ...(bulkForm.applyDesc   ? { desc:     bulkForm.desc     } : {}),
+        ...(bulkForm.applyFrom   ? { fromAcct: bulkForm.fromAcct } : {}),
+        ...(bulkForm.applyTo     ? { toAcct:   bulkForm.toAcct   } : {}),
+        ...(bulkForm.applyAmount ? { amount:   bulkForm.amount   } : {}),
+      }
+      return fetch(`/api/transactions/${id}`, {
+        method: 'PUT', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updated),
+      })
+    }))
+    setBulkEditOpen(false)
+    setMainSelectedIds(new Set())
+    showToast(`${ids.length}건 수정됐습니다 ✓`)
     fetchTxs()
   }
 
@@ -423,10 +470,19 @@ export default function JournalPage() {
                   </button>
                 )}
               </div>
-              <div className="flex flex-1 gap-1 flex-shrink-0">
+              <div className="flex flex-1 gap-1 flex-shrink-0 items-center">
+                <div className="flex gap-0.5 bg-gray-100 rounded-md p-0.5 flex-shrink-0">
+                  {([['all','전체'],['desc','내용'],['acct','항목']] as const).map(([v, label]) => (
+                    <button key={v} onClick={() => setQScope(v)}
+                      className={`text-[10px] px-2 py-0.5 rounded transition-all
+                        ${qScope === v ? 'bg-white text-gray-800 shadow-sm font-medium' : 'text-gray-400 hover:text-gray-600'}`}>
+                      {label}
+                    </button>
+                  ))}
+                </div>
                 <input value={qInput} onChange={e => setQInput(e.target.value)}
                   onKeyDown={e => e.key === 'Enter' && setQ(qInput)}
-                  placeholder="내용 검색"
+                  placeholder={qScope === 'desc' ? '내용 검색' : qScope === 'acct' ? '항목 검색' : '내용·항목 검색'}
                   className="flex-1 text-xs border border-gray-200 rounded-lg px-3 h-7 focus:outline-none focus:border-blue-300" />
                 <button onClick={() => setQ(qInput)}
                   className="px-3 h-7 border border-gray-200 rounded-lg text-xs text-gray-500 hover:bg-gray-50">
@@ -444,6 +500,10 @@ export default function JournalPage() {
                       <button onClick={handleDeleteMainSelected}
                         className="text-xs text-red-500 bg-red-50 border border-red-200 px-2 py-0.5 rounded-full hover:bg-red-100 transition-colors flex items-center gap-0.5">
                         <i className="ti ti-trash text-[10px]" />선택 삭제
+                      </button>
+                      <button onClick={openBulkEdit}
+                        className="text-xs text-blue-600 bg-blue-50 border border-blue-200 px-2 py-0.5 rounded-full hover:bg-blue-100 transition-colors flex items-center gap-0.5">
+                        <i className="ti ti-pencil text-[10px]" />일괄 수정
                       </button>
                     </>
                   )}
@@ -835,6 +895,110 @@ export default function JournalPage() {
                 className="flex-1 py-2 text-xs border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-50">취소</button>
               <button onClick={handleEditSave}
                 className="flex-1 py-2 text-xs bg-[#1a1f2e] text-white rounded-lg hover:opacity-90">저장</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── 일괄 수정 모달 ─────────────────────────────────── */}
+      {bulkEditOpen && (
+        <div className="fixed inset-0 bg-black/30 z-50 flex items-center justify-center"
+          onClick={() => setBulkEditOpen(false)}>
+          <div className="bg-white rounded-2xl p-5 shadow-xl space-y-3"
+            style={{ width: 'min(420px, 95vw)' }}
+            onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-medium text-gray-800">일괄 수정</h3>
+              <span className="text-xs text-blue-600 bg-blue-50 border border-blue-200 px-2 py-0.5 rounded-full">
+                {mainSelectedIds.size}건 선택됨
+              </span>
+            </div>
+            <p className="text-[11px] text-gray-400">체크한 항목만 변경됩니다. 나머지 항목은 그대로 유지됩니다.</p>
+
+            {/* 날짜 */}
+            <div className="flex items-center gap-3">
+              <label className="flex items-center gap-1.5 cursor-pointer select-none flex-shrink-0 w-20">
+                <input type="checkbox" checked={bulkForm.applyDate}
+                  onChange={e => setBulkForm(f => ({ ...f, applyDate: e.target.checked }))}
+                  className="w-3.5 h-3.5 accent-blue-500 cursor-pointer" />
+                <span className={`text-xs ${bulkForm.applyDate ? 'text-gray-700 font-medium' : 'text-gray-400'}`}>날짜</span>
+              </label>
+              <input type="date" value={bulkForm.date} disabled={!bulkForm.applyDate}
+                onChange={e => setBulkForm(f => ({ ...f, date: e.target.value }))}
+                className={`flex-1 text-sm border rounded-lg px-3 h-8 focus:outline-none focus:border-blue-300 transition-colors
+                  ${bulkForm.applyDate ? 'border-gray-200 bg-white text-gray-800' : 'border-gray-100 bg-gray-50 text-gray-300'}`} />
+            </div>
+
+            {/* 내용 */}
+            <div className="flex items-center gap-3">
+              <label className="flex items-center gap-1.5 cursor-pointer select-none flex-shrink-0 w-20">
+                <input type="checkbox" checked={bulkForm.applyDesc}
+                  onChange={e => setBulkForm(f => ({ ...f, applyDesc: e.target.checked }))}
+                  className="w-3.5 h-3.5 accent-blue-500 cursor-pointer" />
+                <span className={`text-xs ${bulkForm.applyDesc ? 'text-gray-700 font-medium' : 'text-gray-400'}`}>내용</span>
+              </label>
+              <input type="text" value={bulkForm.desc} disabled={!bulkForm.applyDesc}
+                onChange={e => setBulkForm(f => ({ ...f, desc: e.target.value }))}
+                placeholder="새 내용 입력"
+                className={`flex-1 text-sm border rounded-lg px-3 h-8 focus:outline-none focus:border-blue-300 transition-colors
+                  ${bulkForm.applyDesc ? 'border-gray-200 bg-white text-gray-800' : 'border-gray-100 bg-gray-50 text-gray-300'}`} />
+            </div>
+
+            {/* 출금 */}
+            <div className="flex items-center gap-3">
+              <label className="flex items-center gap-1.5 cursor-pointer select-none flex-shrink-0 w-20">
+                <input type="checkbox" checked={bulkForm.applyFrom}
+                  onChange={e => setBulkForm(f => ({ ...f, applyFrom: e.target.checked }))}
+                  className="w-3.5 h-3.5 accent-blue-500 cursor-pointer" />
+                <span className={`text-xs ${bulkForm.applyFrom ? 'text-gray-700 font-medium' : 'text-gray-400'}`}>출금</span>
+              </label>
+              <div className={`flex-1 transition-opacity ${bulkForm.applyFrom ? '' : 'opacity-40 pointer-events-none'}`}>
+                <GroupedSelect value={bulkForm.fromAcct}
+                  onChange={v => setBulkForm(f => ({ ...f, fromAcct: v }))}
+                  groups={editFromGroups}
+                  extraOpt={!editFromGroups.flatMap(g => g.opts).includes(bulkForm.fromAcct) && bulkForm.fromAcct ? bulkForm.fromAcct : undefined} />
+              </div>
+            </div>
+
+            {/* 입금 */}
+            <div className="flex items-center gap-3">
+              <label className="flex items-center gap-1.5 cursor-pointer select-none flex-shrink-0 w-20">
+                <input type="checkbox" checked={bulkForm.applyTo}
+                  onChange={e => setBulkForm(f => ({ ...f, applyTo: e.target.checked }))}
+                  className="w-3.5 h-3.5 accent-blue-500 cursor-pointer" />
+                <span className={`text-xs ${bulkForm.applyTo ? 'text-gray-700 font-medium' : 'text-gray-400'}`}>입금</span>
+              </label>
+              <div className={`flex-1 transition-opacity ${bulkForm.applyTo ? '' : 'opacity-40 pointer-events-none'}`}>
+                <GroupedSelect value={bulkForm.toAcct}
+                  onChange={v => setBulkForm(f => ({ ...f, toAcct: v }))}
+                  groups={editToGroups}
+                  extraOpt={!editToGroups.flatMap(g => g.opts).includes(bulkForm.toAcct) && bulkForm.toAcct ? bulkForm.toAcct : undefined} />
+              </div>
+            </div>
+
+            {/* 금액 */}
+            <div className="flex items-center gap-3">
+              <label className="flex items-center gap-1.5 cursor-pointer select-none flex-shrink-0 w-20">
+                <input type="checkbox" checked={bulkForm.applyAmount}
+                  onChange={e => setBulkForm(f => ({ ...f, applyAmount: e.target.checked }))}
+                  className="w-3.5 h-3.5 accent-blue-500 cursor-pointer" />
+                <span className={`text-xs ${bulkForm.applyAmount ? 'text-gray-700 font-medium' : 'text-gray-400'}`}>금액</span>
+              </label>
+              <div className={`flex-1 transition-opacity ${bulkForm.applyAmount ? '' : 'opacity-40 pointer-events-none'}`}>
+                <AmountInput value={bulkForm.amount}
+                  onChange={v => setBulkForm(f => ({ ...f, amount: v }))}
+                  className={`w-full text-sm border rounded-lg px-3 h-8 focus:outline-none focus:border-blue-300
+                    ${bulkForm.applyAmount ? 'border-gray-200' : 'border-gray-100 bg-gray-50'}`} />
+              </div>
+            </div>
+
+            <div className="flex gap-2 pt-1">
+              <button onClick={() => setBulkEditOpen(false)}
+                className="flex-1 py-2 text-xs border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-50">취소</button>
+              <button onClick={handleBulkEditSave}
+                className="flex-1 py-2 text-xs bg-[#1a1f2e] text-white rounded-lg hover:opacity-90">
+                {mainSelectedIds.size}건 저장
+              </button>
             </div>
           </div>
         </div>

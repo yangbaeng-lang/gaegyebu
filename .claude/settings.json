@@ -36,7 +36,9 @@
       "Read(//f/One Drive/OneDrive - SK Hynix Inc/AI 작업폴더/가계부 홈페이지 제작/app$page/**)",
       "Bash(Get-Content \"f:\\\\One Drive\\\\OneDrive - SK Hynix Inc\\\\AI 작업폴더\\\\가계부 홈페이지 제작\\\\app\\\\journal\\\\page.tsx\")",
       "Bash(Select-Object -First 30)",
-      "Bash(Get-ChildItem -Recurse app/stock, app/stock-charts)"
+      "Bash(Get-ChildItem -Recurse app/stock, app/stock-charts)",
+      "Bash(xargs grep -l \"stock\\\\|주식\")",
+      "Bash(grep -r \"금호석유\\\\|Geumho\\\\|yearMonth\\\\|연도별\" --include=\"*.tsx\" --include=\"*.ts\" ! -path \"*/node_modules/*\")"
     ],
     "additionalDirectories": [
       "f:\\One Drive\\OneDrive - SK Hynix Inc\\AI 작업폴더\\가계부 홈페이지 제작\\app\\api\\sessions"

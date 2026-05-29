@@ -14,6 +14,26 @@ export async function GET(req: NextRequest) {
     }),
     prisma.asset.findMany({ where: { sessionId: sid } }),
   ])
+
+  // 카테고리에는 있는데 asset 레코드가 없는 항목 자동 복구
+  const assetTypes = new Set(items.map(a => a.type))
+  const missing = cats.filter(c => c.name !== '__group__' && !assetTypes.has(c.name))
+  if (missing.length > 0) {
+    await prisma.asset.createMany({
+      data: missing.map(c => ({
+        sessionId: sid,
+        name:  c.name,
+        type:  c.name,
+        kind:  c.type === 'account_asset' ? 'asset' : 'liability',
+        amount: 0,
+        color: c.type === 'account_asset' ? '#4a6fdb' : '#d94f4f',
+        icon:  c.type === 'account_asset' ? 'ti-building-bank' : 'ti-credit-card',
+      })),
+      skipDuplicates: true,
+    })
+    items.push(...await prisma.asset.findMany({ where: { sessionId: sid, type: { in: missing.map(c => c.name) } } }))
+  }
+
   const orderMap: Record<string, number> = {}
   cats.forEach((c, i) => { orderMap[c.name] = i })
   const kindMap: Record<string, string> = {}

@@ -199,8 +199,12 @@ export default function SettingsPage() {
   // ── 아이템 수정 ──
   const handleEditSave = async (id: number) => {
     if (!editName.trim()) return
-    await apiPut({ id, name: editName })
-    setEditId(null); showToast('수정됐습니다 ✓'); fetchCats()
+    const res = await apiPut({ id, name: editName })
+    if (res.ok) {
+      setEditId(null); showToast('수정됐습니다 ✓'); fetchCats()
+    } else {
+      showToast((await res.json()).error ?? '오류')
+    }
   }
 
   // ── 아이템 삭제 (모달로 재분류 선택) ──

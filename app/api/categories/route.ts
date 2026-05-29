@@ -30,6 +30,8 @@ async function syncAsset(name: string, kind: 'asset' | 'liability', sid: number)
         icon:  kind === 'asset' ? ASSET_ICON  : LIAB_ICON,
       },
     })
+  } else if (exists.kind !== kind) {
+    await prisma.asset.update({ where: { id: exists.id }, data: { kind } })
   }
 }
 
@@ -100,6 +102,29 @@ export async function POST(req: NextRequest) {
   const { type, name, group, sortOrder: reqSortOrder } = await req.json()
   const sid = getSid(req)
   if (!type || !name?.trim()) return NextResponse.json({ error: '입력값 오류' }, { status: 400 })
+
+  // 같은 유형 내 이름 중복 거부
+  const sameTypeConflict = await prisma.category.findFirst({
+    where: { sessionId: sid, type, name: name.trim() },
+  })
+  if (sameTypeConflict) {
+    return NextResponse.json({ error: `"${name.trim()}"은(는) 이미 존재하는 항목입니다` }, { status: 409 })
+  }
+
+  // 자산/부채 계정은 반대 유형에 같은 이름이 있으면 거부
+  if (type === 'account_asset' || type === 'account_liability') {
+    const oppositeType = type === 'account_asset' ? 'account_liability' : 'account_asset'
+    const conflict = await prisma.category.findFirst({
+      where: { sessionId: sid, type: oppositeType, name: name.trim() },
+    })
+    if (conflict) {
+      return NextResponse.json(
+        { error: `"${name.trim()}"은(는) 이미 ${type === 'account_asset' ? '부채' : '자산'} 계정으로 등록되어 있습니다` },
+        { status: 409 },
+      )
+    }
+  }
+
   try {
     let sortOrder: number
     if (reqSortOrder !== undefined) {
@@ -127,9 +152,32 @@ export async function PUT(req: NextRequest) {
   const { id, name, sortOrder, type, group, hidden } = await req.json()
   const sid = getSid(req)
 
-  const before = name !== undefined
+  const before = (name !== undefined || type !== undefined)
     ? await prisma.category.findUnique({ where: { id } })
     : null
+
+  // 이름 변경 시 같은 유형 내 중복 거부
+  if (before && name !== undefined && before.name !== name.trim() && before.name !== '__group__') {
+    const targetType = type ?? before.type
+    const duplicate = await prisma.category.findFirst({
+      where: { sessionId: sid, type: targetType, name: name.trim(), id: { not: id } },
+    })
+    if (duplicate) {
+      return NextResponse.json({ error: `"${name.trim()}"은(는) 이미 존재하는 항목입니다` }, { status: 409 })
+    }
+    if (targetType === 'account_asset' || targetType === 'account_liability') {
+      const oppositeType = targetType === 'account_asset' ? 'account_liability' : 'account_asset'
+      const conflict = await prisma.category.findFirst({
+        where: { sessionId: sid, type: oppositeType, name: name.trim() },
+      })
+      if (conflict) {
+        return NextResponse.json(
+          { error: `"${name.trim()}"은(는) 이미 ${targetType === 'account_asset' ? '부채' : '자산'} 계정으로 등록되어 있습니다` },
+          { status: 409 },
+        )
+      }
+    }
+  }
 
   const data: Record<string, unknown> = {}
   if (name !== undefined)      data.name      = name.trim()
@@ -146,13 +194,27 @@ export async function PUT(req: NextRequest) {
     })
   }
 
+  if (type !== undefined && (type === 'account_asset' || type === 'account_liability')) {
+    const newKind = type === 'account_asset' ? 'asset' : 'liability'
+    await prisma.asset.updateMany({
+      where: { sessionId: sid, type: cat.name },
+      data: { kind: newKind },
+    })
+  }
+
   if (before && name !== undefined && before.name !== name.trim() && before.name !== '__group__') {
     const newName = name.trim()
-    if (before.type === 'account_asset' || before.type === 'account_liability') {
+    const resolvedType = cat.type
+    if (resolvedType === 'account_asset' || resolvedType === 'account_liability') {
+      // 새 이름으로 이미 존재하는 Asset 항목을 먼저 삭제 (중복 방지)
+      await prisma.asset.deleteMany({ where: { sessionId: sid, type: newName } })
       await prisma.asset.updateMany({
         where: { sessionId: sid, type: before.name },
         data:  { name: newName, type: newName },
       })
+      // 이름 변경 후에도 asset 레코드가 없으면 자동 생성
+      const kind = resolvedType === 'account_asset' ? 'asset' : 'liability'
+      await syncAsset(newName, kind, sid)
     }
     await prisma.transaction.updateMany({ where: { sessionId: sid, fromAcct: before.name }, data: { fromAcct: newName } })
     await prisma.transaction.updateMany({ where: { sessionId: sid, toAcct:   before.name }, data: { toAcct:   newName } })
