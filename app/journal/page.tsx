@@ -103,6 +103,7 @@ export default function JournalPage() {
   const [selectedIds,     setSelectedIds]     = useState<Set<number>>(new Set())
   const [mainSelectedIds, setMainSelectedIds] = useState<Set<number>>(new Set())
   const [bulkEditOpen,    setBulkEditOpen]    = useState(false)
+  const [bulkEditTarget,  setBulkEditTarget]  = useState<'main' | 'panel'>('main')
   const [bulkForm,        setBulkForm]        = useState({ applyDate: false, date: '', applyDesc: false, desc: '', applyFrom: false, fromAcct: '', applyTo: false, toAcct: '', applyAmount: false, amount: 0 })
   const panelMouseDownRef = useRef(false)
   const panelDragStartIdx = useRef(-1)
@@ -345,7 +346,7 @@ export default function JournalPage() {
     fetchTxs()
   }
 
-  const openBulkEdit = () => {
+  const openBulkEdit = (target: 'main' | 'panel' = 'main') => {
     const today = new Date().toISOString().slice(0, 10)
     setBulkForm({
       applyDate: false, date: today,
@@ -354,16 +355,19 @@ export default function JournalPage() {
       applyTo:   false, toAcct:   cats.expense[0]       ?? '',
       applyAmount: false, amount: 0,
     })
+    setBulkEditTarget(target)
     setBulkEditOpen(true)
   }
 
   const handleBulkEditSave = async () => {
-    const ids = Array.from(mainSelectedIds)
+    const isPanel = bulkEditTarget === 'panel'
+    const ids = Array.from(isPanel ? selectedIds : mainSelectedIds)
     if (ids.length === 0) return
     const hasAny = bulkForm.applyDate || bulkForm.applyDesc || bulkForm.applyFrom || bulkForm.applyTo || bulkForm.applyAmount
     if (!hasAny) { showToast('수정할 항목을 선택해주세요'); return }
+    const sourceTxs = isPanel ? panelTxs : txs
     await Promise.all(ids.map(id => {
-      const tx = txs.find(t => t.id === id)
+      const tx = sourceTxs.find(t => t.id === id)
       if (!tx) return Promise.resolve()
       const updated = { ...tx,
         ...(bulkForm.applyDate   ? { date:     bulkForm.date     } : {}),
@@ -378,7 +382,12 @@ export default function JournalPage() {
       })
     }))
     setBulkEditOpen(false)
-    setMainSelectedIds(new Set())
+    if (isPanel) {
+      setSelectedIds(new Set())
+      fetchPanelTxs(panelPeriod.dateFrom, panelPeriod.dateTo)
+    } else {
+      setMainSelectedIds(new Set())
+    }
     showToast(`${ids.length}건 수정됐습니다 ✓`)
     fetchTxs()
   }
@@ -501,7 +510,7 @@ export default function JournalPage() {
                         className="text-xs text-red-500 bg-red-50 border border-red-200 px-2 py-0.5 rounded-full hover:bg-red-100 transition-colors flex items-center gap-0.5">
                         <i className="ti ti-trash text-[10px]" />선택 삭제
                       </button>
-                      <button onClick={openBulkEdit}
+                      <button onClick={() => openBulkEdit('main')}
                         className="text-xs text-blue-600 bg-blue-50 border border-blue-200 px-2 py-0.5 rounded-full hover:bg-blue-100 transition-colors flex items-center gap-0.5">
                         <i className="ti ti-pencil text-[10px]" />일괄 수정
                       </button>
@@ -646,6 +655,10 @@ export default function JournalPage() {
                   <button onClick={handleDeleteSelected}
                     className="text-xs text-red-500 bg-red-50 border border-red-200 px-2 py-0.5 rounded-full flex-shrink-0 hover:bg-red-100 transition-colors flex items-center gap-0.5">
                     <i className="ti ti-trash text-[10px]" />선택 삭제
+                  </button>
+                  <button onClick={() => openBulkEdit('panel')}
+                    className="text-xs text-blue-600 bg-blue-50 border border-blue-200 px-2 py-0.5 rounded-full flex-shrink-0 hover:bg-blue-100 transition-colors flex items-center gap-0.5">
+                    <i className="ti ti-pencil text-[10px]" />일괄 수정
                   </button>
                 </>
               )}
@@ -910,7 +923,7 @@ export default function JournalPage() {
             <div className="flex items-center justify-between">
               <h3 className="text-sm font-medium text-gray-800">일괄 수정</h3>
               <span className="text-xs text-blue-600 bg-blue-50 border border-blue-200 px-2 py-0.5 rounded-full">
-                {mainSelectedIds.size}건 선택됨
+                {(bulkEditTarget === 'panel' ? selectedIds : mainSelectedIds).size}건 선택됨
               </span>
             </div>
             <p className="text-[11px] text-gray-400">체크한 항목만 변경됩니다. 나머지 항목은 그대로 유지됩니다.</p>
@@ -997,7 +1010,7 @@ export default function JournalPage() {
                 className="flex-1 py-2 text-xs border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-50">취소</button>
               <button onClick={handleBulkEditSave}
                 className="flex-1 py-2 text-xs bg-[#1a1f2e] text-white rounded-lg hover:opacity-90">
-                {mainSelectedIds.size}건 저장
+                {(bulkEditTarget === 'panel' ? selectedIds : mainSelectedIds).size}건 저장
               </button>
             </div>
           </div>
