@@ -14,7 +14,7 @@
 R
 
 ■ 한 번에 실행 (PowerShell)
-   cd "f:\One Drive\OneDrive - SK Hynix Inc\AI 작업폴더\가계부 홈페이지 제작"; npm run dev
+   cd D:\Projects\가계부 ; npm run dev
 
 
 ■ 터미널 찾는 방법

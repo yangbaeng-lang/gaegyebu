@@ -2,7 +2,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import {
   ComposedChart, BarChart, Bar, Line, PieChart, Pie, Cell,
-  XAxis, YAxis, Tooltip, ReferenceLine, LabelList,
+  XAxis, YAxis, Tooltip, ReferenceLine,
 } from 'recharts'
 import { fmt } from '@/lib/utils'
 
@@ -28,19 +28,19 @@ function formatY(v: number) {
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-function BarLabel({ x, y, width, value }: any) {
-  if (!value) return null
+function BarLabel({ x, y, width, height, value }: any) {
+  if (!value || !(height >= 15)) return null
   return <text x={x + width / 2} y={y - 4} textAnchor="middle" fontSize={9} fill="#6b7280">{formatY(value)}</text>
 }
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function ProfitLabel({ x, y, width, height, value }: any) {
-  if (!value) return null
+  if (!value || !(Math.abs(height) >= 15)) return null
   const ly = value >= 0 ? y - 4 : y + Math.abs(height) + 11
   return <text x={x + width / 2} y={ly} textAnchor="middle" fontSize={9} fill={value >= 0 ? '#6b7280' : '#f87171'}>{formatY(value)}</text>
 }
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-function GroupLabel({ x, y, width, value }: any) {
-  if (!value) return null
+function GroupLabel({ x, y, width, height, value }: any) {
+  if (!value || !(height >= 15)) return null
   return <text x={x + width / 2} y={y - 4} textAnchor="middle" fontSize={9} fill="#6b7280">{fmt(value)}</text>
 }
 const X_PROPS = {
@@ -202,9 +202,7 @@ export default function ChartsPage() {
                     <Tooltip
                       formatter={(v: number, name: string) => [fmt(v), name === 'income' ? '수입' : '수입 목표']}
                       contentStyle={TIP} />
-                    <Bar dataKey="income" fill="#4fe8a0" radius={[3,3,0,0]}>
-                      <LabelList content={BarLabel} />
-                    </Bar>
+                    <Bar dataKey="income" fill="#4fe8a0" radius={[3,3,0,0]} label={BarLabel} />
                     <Bar dataKey="incomeBudget" fill="#2a9d5c" radius={[3,3,0,0]} opacity={0.5} />
                   </ComposedChart>
                 )}
@@ -230,15 +228,14 @@ export default function ChartsPage() {
                       contentStyle={TIP} />
                     <Bar dataKey="profit" radius={[3,3,0,0]}
                       fill="#4a6fdb"
+                      label={ProfitLabel}
                       shape={(props: any) => {
                         const { x, y, width, height, value } = props
                         const fill = value >= 0 ? '#4a6fdb' : '#f87171'
                         const ry = value >= 0 ? y : y + height
                         const rh = Math.abs(height)
                         return <rect x={x} y={ry} width={width} height={rh} fill={fill} rx={3} />
-                      }}>
-                      <LabelList dataKey="profit" content={ProfitLabel} />
-                    </Bar>
+                      }} />
                     <Bar dataKey="profitBudget" fill="#a5b4fc" radius={[3,3,0,0]} opacity={0.7} />
                   </ComposedChart>
                 )}
@@ -265,9 +262,7 @@ export default function ChartsPage() {
                     <Tooltip
                       formatter={(v: number, name: string) => [fmt(v), name === 'expense' ? '지출' : '예산 목표']}
                       contentStyle={TIP} />
-                    <Bar dataKey="expense" fill="#ff9090" radius={[3,3,0,0]}>
-                      <LabelList content={BarLabel} />
-                    </Bar>
+                    <Bar dataKey="expense" fill="#ff9090" radius={[3,3,0,0]} label={BarLabel} />
                     <Bar dataKey="expenseBudget" fill="#d94f4f" radius={[3,3,0,0]} opacity={0.5} />
                   </ComposedChart>
                 )}
@@ -288,9 +283,7 @@ export default function ChartsPage() {
                     <XAxis {...X_PROPS} />
                     <YAxis domain={domain} hide />
                     <Tooltip formatter={(v: number) => [fmt(v), selGrp]} contentStyle={TIP} />
-                    <Bar dataKey="amount" fill="#f0a020" radius={[3,3,0,0]}>
-                      <LabelList content={GroupLabel} />
-                    </Bar>
+                    <Bar dataKey="amount" fill="#f0a020" radius={[3,3,0,0]} label={GroupLabel} />
                   </BarChart>
                 )}
               </ScrollChart>
@@ -327,15 +320,14 @@ export default function ChartsPage() {
                                            [`${v}%`, '전년 대비']}
                     contentStyle={TIP} />
                   <Bar yAxisId="left" dataKey="netWorth" radius={[3,3,0,0]}
+                    label={ProfitLabel}
                     shape={(props: any) => {
                       const { x, y, width, height, value } = props
                       const fill = value >= 0 ? '#6b8cff' : '#f87171'
                       const ry = value >= 0 ? y : y + height
                       const rh = Math.abs(height)
                       return <rect x={x} y={ry} width={width} height={rh} fill={fill} rx={3} />
-                    }}>
-                    <LabelList dataKey="netWorth" content={ProfitLabel} />
-                  </Bar>
+                    }} />
                   {mode === 'monthly' && (
                     <Line yAxisId="right" dataKey="momRate" stroke="#f0a020" strokeWidth={1.5}
                       strokeDasharray="4 3" dot={false} connectNulls={false} legendType="none" />

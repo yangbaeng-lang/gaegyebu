@@ -69,9 +69,9 @@ export default function SectionsPage() {
       targets.map(s =>
         fetch(`/api/pension-eval?sessionId=${s.id}&yearMonth=${ym}`)
           .then(r => r.json())
-          .then((d: { items?: { 평가액: number; hasEval: boolean }[] }) => ({
+          .then((d: { items?: { 평가액: number; hasEval: boolean; 납입액: number }[] }) => ({
             id: s.id,
-            total: (d.items ?? []).filter(i => i.hasEval).reduce((sum, i) => sum + i.평가액, 0),
+            total: (d.items ?? []).filter(i => i.hasEval && i.납입액 !== 0).reduce((sum, i) => sum + i.평가액, 0),
           }))
       )
     ).then(results => {

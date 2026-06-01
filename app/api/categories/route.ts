@@ -232,6 +232,7 @@ export async function DELETE(req: NextRequest) {
   if (cat && cat.name !== '__group__') {
     if (cat.type === 'account_asset' || cat.type === 'account_liability') {
       await prisma.asset.deleteMany({ where: { sessionId: sid, type: cat.name } })
+      await prisma.pensionEval.deleteMany({ where: { sessionId: sid, assetName: cat.name } })
     }
     const newAcct = replaceName?.trim() || ''
     await prisma.transaction.updateMany({ where: { sessionId: sid, fromAcct: cat.name }, data: { fromAcct: newAcct } })
