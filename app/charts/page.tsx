@@ -29,18 +29,18 @@ function formatY(v: number) {
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function BarLabel({ x, y, width, height, value }: any) {
-  if (!value || !(height >= 15)) return null
+  if (!value || !(height >= 15)) return <g />
   return <text x={x + width / 2} y={y - 4} textAnchor="middle" fontSize={9} fill="#6b7280">{formatY(value)}</text>
 }
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function ProfitLabel({ x, y, width, height, value }: any) {
-  if (!value || !(Math.abs(height) >= 15)) return null
+  if (!value || !(Math.abs(height) >= 15)) return <g />
   const ly = value >= 0 ? y - 4 : y + Math.abs(height) + 11
   return <text x={x + width / 2} y={ly} textAnchor="middle" fontSize={9} fill={value >= 0 ? '#6b7280' : '#f87171'}>{formatY(value)}</text>
 }
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function GroupLabel({ x, y, width, height, value }: any) {
-  if (!value || !(height >= 15)) return null
+  if (!value || !(height >= 15)) return <g />
   return <text x={x + width / 2} y={y - 4} textAnchor="middle" fontSize={9} fill="#6b7280">{fmt(value)}</text>
 }
 const X_PROPS = {
