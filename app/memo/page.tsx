@@ -34,7 +34,10 @@ export default function MemoPage() {
   const [pwChecking, setPwChecking]     = useState(false)
   const pwRef                           = useRef<HTMLInputElement>(null)
 
+  const PAGE_SIZE = 13
+
   const [memos, setMemos]               = useState<Memo[]>([])
+  const [page, setPage]                 = useState(0)
   const [loading, setLoading]           = useState(true)
   const [modal, setModal]               = useState<'new' | 'edit' | null>(null)
   const [selected, setSelected]         = useState<Memo | null>(null)
@@ -81,12 +84,13 @@ export default function MemoPage() {
     setTimeout(() => setToast(''), 2000)
   }
 
-  const fetchMemos = async () => {
+  const fetchMemos = async (keepPage = false) => {
     setLoading(true)
     try {
       const res  = await fetch('/api/memos')
       const data = await res.json()
       setMemos(data)
+      if (!keepPage) setPage(0)
     } finally {
       setLoading(false)
     }
@@ -144,7 +148,10 @@ export default function MemoPage() {
     await fetch(`/api/memos/${id}`, { method: 'DELETE' })
     setConfirmDeleteId(null)
     showToast('삭제되었습니다')
-    fetchMemos()
+    const remaining = memos.length - 1
+    const maxPage = Math.max(0, Math.ceil(remaining / PAGE_SIZE) - 1)
+    if (page > maxPage) setPage(maxPage)
+    fetchMemos(true)
   }
 
   const toggleStarred = async (e: React.MouseEvent, memo: Memo) => {
@@ -231,8 +238,9 @@ export default function MemoPage() {
             <p className="text-xs mt-1">우측 상단 버튼으로 새 메모를 추가하세요</p>
           </div>
         ) : (
+          <>
           <div className="space-y-2 max-w-2xl mx-auto">
-            {memos.map(memo => (
+            {memos.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE).map(memo => (
               <div
                 key={memo.id}
                 onClick={() => { if (confirmDeleteId !== memo.id) openEditModal(memo) }}
@@ -298,6 +306,29 @@ export default function MemoPage() {
               </div>
             ))}
           </div>
+          {/* 페이지 컨트롤 */}
+          {memos.length > PAGE_SIZE && (
+            <div className="flex items-center justify-center gap-3 mt-4 max-w-2xl mx-auto">
+              <button
+                onClick={() => setPage(p => Math.max(0, p - 1))}
+                disabled={page === 0}
+                className="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 text-gray-400 hover:bg-gray-50 hover:text-gray-700 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+              >
+                <i className="ti ti-chevron-left text-sm" />
+              </button>
+              <span className="text-xs text-gray-400 tabular-nums">
+                {page + 1} / {Math.ceil(memos.length / PAGE_SIZE)}
+              </span>
+              <button
+                onClick={() => setPage(p => Math.min(Math.ceil(memos.length / PAGE_SIZE) - 1, p + 1))}
+                disabled={page >= Math.ceil(memos.length / PAGE_SIZE) - 1}
+                className="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 text-gray-400 hover:bg-gray-50 hover:text-gray-700 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+              >
+                <i className="ti ti-chevron-right text-sm" />
+              </button>
+            </div>
+          )}
+          </>
         )}
       </div>
 
