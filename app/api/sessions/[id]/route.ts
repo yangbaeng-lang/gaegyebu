@@ -36,7 +36,8 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
     prisma.budget.deleteMany({      where: { sessionId: id } }),
     prisma.asset.deleteMany({       where: { sessionId: id } }),
     prisma.goal.deleteMany({        where: { sessionId: id } }),
-    prisma.category.deleteMany({   where: { sessionId: id } }),
+    prisma.category.deleteMany({    where: { sessionId: id } }),
+    prisma.memo.deleteMany({        where: { sessionId: id } }),
   ])
   await prisma.session.delete({ where: { id } })
 

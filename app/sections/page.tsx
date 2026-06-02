@@ -320,7 +320,8 @@ export default function SectionsPage() {
           {/* 전체 합계 배너 */}
           {sections.length > 1 && (
             <div className="bg-[#1a1f2e] rounded-2xl overflow-hidden">
-              <div className="px-5 py-[22px] space-y-3">
+              {/* 모바일 */}
+              <div className="md:hidden px-5 py-[22px] space-y-3">
                 <p className="text-[14px] font-semibold text-white">전체 합계</p>
                 <div className="grid grid-cols-3 gap-2">
                   <div>
@@ -336,6 +337,28 @@ export default function SectionsPage() {
                     <p className={`text-[13px] font-semibold tabular-nums ${totalNet >= 0 ? 'text-[#4fe8a0]' : 'text-[#ff7070]'}`}>{fmt(totalNet)}</p>
                     {hasAnyEval && (
                       <p className={`text-[10px] tabular-nums mt-0.5 ${totalNetWithEval >= 0 ? 'text-[#a5f3d0]' : 'text-[#ffb3b3]'}`}>
+                        평가 포함 {fmt(totalNetWithEval)}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </div>
+              {/* 데스크탑 */}
+              <div className="hidden md:grid md:grid-cols-4 px-5 py-[22px]">
+                <div className="flex items-center">
+                  <p className="text-[15px] font-semibold text-white">전체 합계</p>
+                </div>
+                <div className="flex items-center justify-end">
+                  <p className="text-[15px] font-semibold text-white tabular-nums">{fmt(totalAssets)}</p>
+                </div>
+                <div className="flex items-center justify-end">
+                  <p className="text-[15px] font-semibold text-[#ff7070] tabular-nums">{fmt(totalLiab)}</p>
+                </div>
+                <div className="flex items-center justify-end">
+                  <div className="text-right">
+                    <p className={`text-[15px] font-semibold tabular-nums ${totalNet >= 0 ? 'text-[#4fe8a0]' : 'text-[#ff7070]'}`}>{fmt(totalNet)}</p>
+                    {hasAnyEval && (
+                      <p className={`text-[11px] tabular-nums mt-0.5 ${totalNetWithEval >= 0 ? 'text-[#a5f3d0]' : 'text-[#ffb3b3]'}`}>
                         평가 포함 {fmt(totalNetWithEval)}
                       </p>
                     )}
@@ -362,12 +385,73 @@ export default function SectionsPage() {
                     onDrop={() => handleDrop(i)}
                     onDragEnd={() => { setDragIndex(null); setDragOverIndex(null) }}
                     onClick={() => switchSection(s.id)}
-                    className={`px-4 py-3.5 cursor-pointer transition-all group border-t-2
+                    className={`cursor-pointer transition-all group border-t-2
                       ${dragOverIndex === i && dragIndex !== i ? 'border-[#6b8cff]' : 'border-transparent'}
                       ${dragIndex === i ? 'opacity-40' : ''}
                       ${s.id === currentSid ? 'bg-[#6b8cff]/5' : 'hover:bg-gray-50'}`}>
-                    <div className="flex items-center justify-between gap-2">
-                      <div className="flex items-center gap-2 min-w-0">
+                    {/* 모바일 레이아웃 */}
+                    <div className="md:hidden px-4 py-3.5">
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <i
+                            className="ti ti-grip-vertical text-gray-300 hover:text-gray-400 cursor-grab flex-shrink-0"
+                            onClick={e => e.stopPropagation()}
+                          />
+                          {s.id === currentSid && (
+                            <span className="w-1.5 h-1.5 rounded-full bg-[#6b8cff] flex-shrink-0" />
+                          )}
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-1.5">
+                              <p className={`text-[15px] font-semibold truncate ${s.id === currentSid ? 'text-[#6b8cff]' : 'text-gray-800 group-hover:text-gray-900'}`}>
+                                {s.name}
+                              </p>
+                              {s.currency === 'USD' && (
+                                <span className="text-[10px] font-bold text-white bg-[#6b8cff] rounded px-1 py-0.5 leading-none flex-shrink-0">USD</span>
+                              )}
+                            </div>
+                            <p className="text-[11px] text-gray-400 mt-0.5">
+                              {new Date(s.createdAt).toLocaleDateString('ko-KR', { year: 'numeric', month: 'short', day: 'numeric' })}
+                            </p>
+                          </div>
+                        </div>
+                        <button
+                          onClick={e => { e.stopPropagation(); setSettingsModal({ id: s.id, name: s.name, decimalPlaces: s.decimalPlaces ?? 0, currency: s.currency ?? 'KRW', exchangeRate: s.exchangeRate ?? null }) }}
+                          className="p-1 rounded-md hover:bg-gray-200 text-gray-300 hover:text-gray-500 flex-shrink-0 transition-colors">
+                          <i className="ti ti-settings text-xs" />
+                        </button>
+                      </div>
+                      <div className="grid grid-cols-3 gap-2 mt-2.5 pl-6">
+                        {(() => { const a = fmtAmount(s.totalAssets, s); return (
+                          <div>
+                            <p className="text-[10px] text-gray-400 mb-0.5">자산</p>
+                            <p className="text-[13px] font-medium text-gray-800 tabular-nums">{a.usd ?? a.krw}</p>
+                            {a.usd && a.krw && <p className="text-[10px] text-gray-400 tabular-nums">≈{a.krw}</p>}
+                          </div>
+                        )})()}
+                        {(() => { const a = fmtAmount(s.totalLiab, s); return (
+                          <div>
+                            <p className="text-[10px] text-gray-400 mb-0.5">부채</p>
+                            <p className={`text-[13px] font-medium tabular-nums ${s.totalLiab > 0 ? 'text-[#d94f4f]' : 'text-gray-400'}`}>{a.usd ?? a.krw}</p>
+                            {a.usd && a.krw && <p className="text-[10px] text-gray-400 tabular-nums">≈{a.krw}</p>}
+                          </div>
+                        )})()}
+                        {(() => { const a = fmtAmount(s.netWorth, s); return (
+                          <div>
+                            <p className="text-[10px] text-gray-400 mb-0.5">순자산</p>
+                            <p className={`text-[13px] font-semibold tabular-nums ${s.netWorth >= 0 ? 'text-[#2a9d5c]' : 'text-[#d94f4f]'}`}>{a.usd ?? a.krw}</p>
+                            {a.usd && a.krw && <p className="text-[10px] text-gray-400 tabular-nums">≈{a.krw}</p>}
+                            {evalTotals[s.id] !== undefined && evalTotals[s.id] > 0 && (
+                              <p className="text-[10px] text-[#6b8cff] tabular-nums mt-0.5">
+                                평가 {fmt(evalTotals[s.id])}
+                              </p>
+                            )}
+                          </div>
+                        )})()}
+                      </div>
+                    </div>
+                    {/* 데스크탑 레이아웃 */}
+                    <div className="hidden md:grid md:grid-cols-4 px-5 py-4">
+                      <div className="flex items-center gap-2">
                         <i
                           className="ti ti-grip-vertical text-gray-300 hover:text-gray-400 cursor-grab flex-shrink-0"
                           onClick={e => e.stopPropagation()}
@@ -375,13 +459,13 @@ export default function SectionsPage() {
                         {s.id === currentSid && (
                           <span className="w-1.5 h-1.5 rounded-full bg-[#6b8cff] flex-shrink-0" />
                         )}
-                        <div className="min-w-0">
+                        <div>
                           <div className="flex items-center gap-1.5">
-                            <p className={`text-[15px] font-semibold truncate ${s.id === currentSid ? 'text-[#6b8cff]' : 'text-gray-800 group-hover:text-gray-900'}`}>
+                            <p className={`text-[15px] font-semibold ${s.id === currentSid ? 'text-[#6b8cff]' : 'text-gray-800 group-hover:text-gray-900'}`}>
                               {s.name}
                             </p>
                             {s.currency === 'USD' && (
-                              <span className="text-[10px] font-bold text-white bg-[#6b8cff] rounded px-1 py-0.5 leading-none flex-shrink-0">USD</span>
+                              <span className="text-[10px] font-bold text-white bg-[#6b8cff] rounded px-1 py-0.5 leading-none">USD</span>
                             )}
                           </div>
                           <p className="text-[11px] text-gray-400 mt-0.5">
@@ -389,39 +473,40 @@ export default function SectionsPage() {
                           </p>
                         </div>
                       </div>
-                      <button
-                        onClick={e => { e.stopPropagation(); setSettingsModal({ id: s.id, name: s.name, decimalPlaces: s.decimalPlaces ?? 0, currency: s.currency ?? 'KRW', exchangeRate: s.exchangeRate ?? null }) }}
-                        className="p-1 rounded-md hover:bg-gray-200 text-gray-300 hover:text-gray-500 flex-shrink-0 transition-colors">
-                        <i className="ti ti-settings text-xs" />
-                      </button>
-                    </div>
-                    <div className="grid grid-cols-3 gap-2 mt-2.5 pl-6">
-                      {(() => { const a = fmtAmount(s.totalAssets, s); return (
-                        <div>
-                          <p className="text-[10px] text-gray-400 mb-0.5">자산</p>
-                          <p className="text-[13px] font-medium text-gray-800 tabular-nums">{a.usd ?? a.krw}</p>
-                          {a.usd && a.krw && <p className="text-[10px] text-gray-400 tabular-nums">≈{a.krw}</p>}
-                        </div>
-                      )})()}
-                      {(() => { const a = fmtAmount(s.totalLiab, s); return (
-                        <div>
-                          <p className="text-[10px] text-gray-400 mb-0.5">부채</p>
-                          <p className={`text-[13px] font-medium tabular-nums ${s.totalLiab > 0 ? 'text-[#d94f4f]' : 'text-gray-400'}`}>{a.usd ?? a.krw}</p>
-                          {a.usd && a.krw && <p className="text-[10px] text-gray-400 tabular-nums">≈{a.krw}</p>}
-                        </div>
-                      )})()}
-                      {(() => { const a = fmtAmount(s.netWorth, s); return (
-                        <div>
-                          <p className="text-[10px] text-gray-400 mb-0.5">순자산</p>
-                          <p className={`text-[13px] font-semibold tabular-nums ${s.netWorth >= 0 ? 'text-[#2a9d5c]' : 'text-[#d94f4f]'}`}>{a.usd ?? a.krw}</p>
-                          {a.usd && a.krw && <p className="text-[10px] text-gray-400 tabular-nums">≈{a.krw}</p>}
-                          {evalTotals[s.id] !== undefined && evalTotals[s.id] > 0 && (
-                            <p className="text-[10px] text-[#6b8cff] tabular-nums mt-0.5">
-                              평가 {fmt(evalTotals[s.id])}
-                            </p>
-                          )}
-                        </div>
-                      )})()}
+                      <div className="flex items-center justify-end">
+                        {(() => { const a = fmtAmount(s.totalAssets, s); return (
+                          <div className="text-right">
+                            <p className="text-[15px] font-medium text-gray-800 tabular-nums">{a.usd ?? a.krw}</p>
+                            {a.usd && a.krw && <p className="text-[11px] text-gray-400 tabular-nums">≈{a.krw}</p>}
+                          </div>
+                        )})()}
+                      </div>
+                      <div className="flex items-center justify-end">
+                        {(() => { const a = fmtAmount(s.totalLiab, s); return (
+                          <div className="text-right">
+                            <p className={`text-[15px] font-medium tabular-nums ${s.totalLiab > 0 ? 'text-[#d94f4f]' : 'text-gray-400'}`}>{a.usd ?? a.krw}</p>
+                            {a.usd && a.krw && <p className="text-[11px] text-gray-400 tabular-nums">≈{a.krw}</p>}
+                          </div>
+                        )})()}
+                      </div>
+                      <div className="flex items-center justify-end gap-2">
+                        {(() => { const a = fmtAmount(s.netWorth, s); return (
+                          <div className="text-right">
+                            <p className={`text-[15px] font-semibold tabular-nums ${s.netWorth >= 0 ? 'text-[#2a9d5c]' : 'text-[#d94f4f]'}`}>{a.usd ?? a.krw}</p>
+                            {a.usd && a.krw && <p className="text-[11px] text-gray-400 tabular-nums">≈{a.krw}</p>}
+                            {evalTotals[s.id] !== undefined && evalTotals[s.id] > 0 && (
+                              <p className="text-[11px] text-[#6b8cff] tabular-nums mt-0.5">
+                                평가 {fmt(evalTotals[s.id])}
+                              </p>
+                            )}
+                          </div>
+                        )})()}
+                        <button
+                          onClick={e => { e.stopPropagation(); setSettingsModal({ id: s.id, name: s.name, decimalPlaces: s.decimalPlaces ?? 0, currency: s.currency ?? 'KRW', exchangeRate: s.exchangeRate ?? null }) }}
+                          className="p-1 rounded-md hover:bg-gray-200 text-gray-300 hover:text-gray-500 flex-shrink-0 transition-colors">
+                          <i className="ti ti-settings text-xs" />
+                        </button>
+                      </div>
                     </div>
                   </div>
                 ))}

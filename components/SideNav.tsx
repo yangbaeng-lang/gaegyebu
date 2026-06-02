@@ -238,6 +238,15 @@ export default function SideNav() {
           <i className="ti ti-award text-base w-4 flex-shrink-0" />
           <span className="font-semibold">성과급</span>
         </Link>
+        <Link href="/memo"
+          className={`flex items-center gap-2.5 px-3 py-2 mx-2 rounded-lg text-base transition-colors
+            ${pathname === '/memo'
+              ? 'text-white bg-[#6b8cff]'
+              : 'text-white hover:bg-white/[0.08]'
+            }`}>
+          <i className="ti ti-notes text-base w-4 flex-shrink-0" />
+          <span className="font-semibold">메모</span>
+        </Link>
         <Link href="/settings"
           className={`flex items-center gap-2.5 px-3 py-2 mx-2 rounded-lg text-base transition-colors
             ${pathname === '/settings'

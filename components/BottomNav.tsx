@@ -19,6 +19,7 @@ const MORE_NAV = [
   { href: '/stock-charts',   icon: 'ti-chart-histogram', label: '주식 차트' },
   { href: '/overview',       icon: 'ti-chart-area-line', label: '전체 현황' },
   { href: '/performance',     icon: 'ti-award',           label: '성과급'   },
+  { href: '/memo',           icon: 'ti-notes',           label: '메모'     },
   { href: '/settings',       icon: 'ti-settings',        label: '설정'     },
 ]
 
