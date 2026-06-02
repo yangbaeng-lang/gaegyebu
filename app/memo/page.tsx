@@ -1,5 +1,5 @@
 'use client'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useSession } from '@/lib/SessionContext'
 
 type Memo = {
@@ -28,6 +28,12 @@ function todayStr(): string {
 export default function MemoPage() {
   const { refreshKey } = useSession()
 
+  const [unlocked, setUnlocked]         = useState(false)
+  const [pwInput, setPwInput]           = useState('')
+  const [pwError, setPwError]           = useState(false)
+  const [pwChecking, setPwChecking]     = useState(false)
+  const pwRef                           = useRef<HTMLInputElement>(null)
+
   const [memos, setMemos]               = useState<Memo[]>([])
   const [loading, setLoading]           = useState(true)
   const [modal, setModal]               = useState<'new' | 'edit' | null>(null)
@@ -38,6 +44,37 @@ export default function MemoPage() {
   const [saving, setSaving]             = useState(false)
   const [confirmDeleteId, setConfirmDeleteId] = useState<number | null>(null)
   const [toast, setToast]               = useState('')
+
+  useEffect(() => {
+    if (sessionStorage.getItem('memo_unlocked') === '1') {
+      setUnlocked(true)
+    } else {
+      setTimeout(() => pwRef.current?.focus(), 50)
+    }
+  }, [])
+
+  const handleUnlock = async () => {
+    if (!pwInput) return
+    setPwChecking(true)
+    setPwError(false)
+    try {
+      const res = await fetch('/api/auth/memo', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ password: pwInput }),
+      })
+      if (res.ok) {
+        sessionStorage.setItem('memo_unlocked', '1')
+        setUnlocked(true)
+      } else {
+        setPwError(true)
+        setPwInput('')
+        setTimeout(() => pwRef.current?.focus(), 50)
+      }
+    } finally {
+      setPwChecking(false)
+    }
+  }
 
   const showToast = (msg: string) => {
     setToast(msg)
@@ -126,6 +163,45 @@ export default function MemoPage() {
       headers: { 'Content-Type': 'application/json' },
       body:    JSON.stringify({ starred: next }),
     })
+  }
+
+  if (!unlocked) {
+    return (
+      <div className="flex flex-col h-full items-center justify-center bg-gray-50">
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-8 w-full max-w-xs mx-4 flex flex-col items-center gap-5">
+          <div className="w-14 h-14 rounded-full bg-gray-100 flex items-center justify-center">
+            <i className="ti ti-lock text-2xl text-gray-400" />
+          </div>
+          <div className="text-center">
+            <p className="text-sm font-semibold text-gray-800">비공개 메모</p>
+            <p className="text-xs text-gray-400 mt-1">비밀번호를 입력하세요</p>
+          </div>
+          <div className="w-full">
+            <input
+              ref={pwRef}
+              type="password"
+              value={pwInput}
+              onChange={e => { setPwInput(e.target.value); setPwError(false) }}
+              onKeyDown={e => e.key === 'Enter' && handleUnlock()}
+              placeholder="비밀번호"
+              className={`w-full text-sm border rounded-lg px-3 h-10 focus:outline-none text-center tracking-widest transition-colors ${
+                pwError ? 'border-red-300 bg-red-50 focus:border-red-400' : 'border-gray-200 focus:border-blue-400'
+              }`}
+            />
+            {pwError && (
+              <p className="text-xs text-red-400 text-center mt-1.5">비밀번호가 틀렸습니다</p>
+            )}
+          </div>
+          <button
+            onClick={handleUnlock}
+            disabled={!pwInput || pwChecking}
+            className="w-full py-2.5 text-sm bg-[#1a1f2e] text-white rounded-lg hover:opacity-90 disabled:opacity-40 transition-opacity"
+          >
+            {pwChecking ? '확인 중...' : '입장'}
+          </button>
+        </div>
+      </div>
+    )
   }
 
   return (
