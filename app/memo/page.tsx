@@ -26,7 +26,7 @@ function todayStr(): string {
 }
 
 export default function MemoPage() {
-  const { refreshKey } = useSession()
+  const { refreshKey, currentSid } = useSession()
 
   const [unlocked, setUnlocked]         = useState(false)
   const [pwInput, setPwInput]           = useState('')
@@ -96,7 +96,7 @@ export default function MemoPage() {
     }
   }
 
-  useEffect(() => { fetchMemos() }, [refreshKey])
+  useEffect(() => { fetchMemos() }, [refreshKey, currentSid])
 
   const openNewModal = () => {
     setFormDate(todayStr())
@@ -339,7 +339,7 @@ export default function MemoPage() {
           onClick={closeModal}
         >
           <div
-            className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-md mx-4"
+            className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-2xl mx-4"
             onClick={e => e.stopPropagation()}
           >
             <div className="flex items-center justify-between mb-5">

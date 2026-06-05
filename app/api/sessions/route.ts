@@ -12,10 +12,23 @@ async function ensureDefaultSession() {
 export async function GET(req: NextRequest) {
   await ensureDefaultSession()
   const sessions = await prisma.session.findMany({ orderBy: [{ sortOrder: 'asc' }, { id: 'asc' }] })
-  const current  = getSid(req)
-  return NextResponse.json({ sessions, current }, {
+
+  const hasCookie = req.cookies.has('sid')
+  const cookieSid = getSid(req)
+  const validSession = sessions.find(s => s.id === cookieSid)
+
+  // 쿠키가 없거나 존재하지 않는 세션을 가리키면 첫 번째 세션으로 초기화
+  const current = validSession ? cookieSid : (sessions[0]?.id ?? 1)
+
+  const res = NextResponse.json({ sessions, current }, {
     headers: { 'Cache-Control': 'private, max-age=30, stale-while-revalidate=60', 'Vary': 'Cookie' },
   })
+
+  if (!hasCookie || !validSession) {
+    res.cookies.set('sid', String(current), { path: '/', sameSite: 'lax', maxAge: 60 * 60 * 24 * 365 })
+  }
+
+  return res
 }
 
 export async function PATCH(req: NextRequest) {
