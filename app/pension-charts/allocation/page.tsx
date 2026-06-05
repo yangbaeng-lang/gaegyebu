@@ -27,9 +27,10 @@ const CATEGORY_RULES: Array<{ keyword: string; category: string }> = [
   { keyword: 'TDF',     category: 'TDF'     },
   { keyword: '금채권',   category: '금'       },
   { keyword: '반도체',   category: '반도체'   },
+  { keyword: '우주',     category: '우주' },
 ]
 
-const CATEGORY_ORDER = ['S&P500', '나스닥', '반도체', 'TDF', '다우존스', '금', '미분류']
+const CATEGORY_ORDER = ['S&P500', '나스닥', '반도체', '우주', 'TDF', '다우존스', '금', '미분류']
 
 const CATEGORY_COLORS: Record<string, string> = {
   'S&P500':  '#6b8cff',
@@ -38,6 +39,7 @@ const CATEGORY_COLORS: Record<string, string> = {
   '다우존스': '#f97316',
   '금':      '#eab308',
   '반도체':  '#06b6d4',
+  '우주':    '#7c3aed',
   '미분류':  '#9ca3af',
 }
 
