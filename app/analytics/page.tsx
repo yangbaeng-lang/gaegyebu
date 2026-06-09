@@ -164,14 +164,20 @@ export default function AnalyticsPage() {
       .sort((a, b) => b.date.localeCompare(a.date) || b.id - a.id)
   }, [allTxs, selectedDow])
 
+  const incomeCatNames = useMemo(() =>
+    new Set(cats.filter(c => c.type === 'income' && c.name !== '__group__').map(c => c.name))
+  , [cats])
+
   const catFilteredTxs = useMemo(() => {
     if (!selectedCat) return []
     return catTxs.filter(tx =>
       selectedCat.txType === 'expense'
         ? (tx.type === 'expense' || tx.type === 'income_expense') && tx.toAcct   === selectedCat.name
-        : (tx.type === 'income'  || tx.type === 'income_expense') && tx.fromAcct === selectedCat.name
+        : ((tx.type === 'income' || tx.type === 'income_expense') ||
+           (tx.type === 'expense' && incomeCatNames.has(selectedCat.name))) &&
+          tx.fromAcct === selectedCat.name
     ).sort((a, b) => b.date.localeCompare(a.date) || b.id - a.id)
-  }, [catTxs, selectedCat])
+  }, [catTxs, selectedCat, incomeCatNames])
 
   // 대분류 그룹 구조 빌더
   const buildGroups = (catType: string, sourceList: CatItem[]) => {

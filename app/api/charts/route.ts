@@ -15,12 +15,11 @@ export async function GET(req: NextRequest) {
     prisma.category.findMany({ where: { sessionId: sid, type: 'income' }, select: { name: true } }),
   ])
 
-  const incomeCatSet  = new Set(incomeCats.map(c => c.name))
-  const expenseCatSet = new Set(cats.map(c => c.name))
+  const incomeCatSet   = new Set(incomeCats.map(c => c.name))
+  const expenseGroups  = groupAnchors.map(g => g.group).filter(Boolean) as string[]
+  const expenseGrpSet  = new Set(expenseGroups)
   const validBudgets    = budgets.filter(b => incomeCatSet.has(b.category.slice('income:'.length)))
-  const validExpBudgets = expBudgets.filter(b => expenseCatSet.has(b.category))
-
-  const expenseGroups = groupAnchors.map(g => g.group).filter(Boolean) as string[]
+  const validExpBudgets = expBudgets.filter(b => expenseGrpSet.has(b.category))
   const catGroupMap: Record<string, string> = {}
   cats.forEach(c => { catGroupMap[c.name] = c.group || '미분류' })
 

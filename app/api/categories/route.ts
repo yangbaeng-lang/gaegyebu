@@ -103,23 +103,25 @@ export async function POST(req: NextRequest) {
   const sid = getSid(req)
   if (!type || !name?.trim()) return NextResponse.json({ error: '입력값 오류' }, { status: 400 })
 
-  // 같은 유형 내 이름 중복 거부
-  const sameTypeConflict = await prisma.category.findFirst({
-    where: { sessionId: sid, type, name: name.trim() },
-  })
-  if (sameTypeConflict) {
-    return NextResponse.json({ error: `"${name.trim()}"은(는) 이미 존재하는 항목입니다` }, { status: 409 })
+  // 그룹명/항목명 통합 중복 검사: 같은 type 내에서 그룹명과 항목명은 겹칠 수 없음
+  const displayName = name.trim() === '__group__' ? (group ?? '') : name.trim()
+  const [itemConflict, groupConflict] = await Promise.all([
+    prisma.category.findFirst({ where: { sessionId: sid, type, name: displayName } }),
+    prisma.category.findFirst({ where: { sessionId: sid, type, name: '__group__', group: displayName } }),
+  ])
+  if (itemConflict || groupConflict) {
+    return NextResponse.json({ error: `"${displayName}"은(는) 이미 존재하는 이름입니다` }, { status: 409 })
   }
 
-  // 자산/부채 계정은 반대 유형에 같은 이름이 있으면 거부
-  if (type === 'account_asset' || type === 'account_liability') {
+  // 자산/부채 계정 항목은 반대 유형에 같은 이름이 있으면 거부
+  if (name.trim() !== '__group__' && (type === 'account_asset' || type === 'account_liability')) {
     const oppositeType = type === 'account_asset' ? 'account_liability' : 'account_asset'
     const conflict = await prisma.category.findFirst({
-      where: { sessionId: sid, type: oppositeType, name: name.trim() },
+      where: { sessionId: sid, type: oppositeType, name: displayName },
     })
     if (conflict) {
       return NextResponse.json(
-        { error: `"${name.trim()}"은(는) 이미 ${type === 'account_asset' ? '부채' : '자산'} 계정으로 등록되어 있습니다` },
+        { error: `"${displayName}"은(는) 이미 ${type === 'account_asset' ? '부채' : '자산'} 계정으로 등록되어 있습니다` },
         { status: 409 },
       )
     }

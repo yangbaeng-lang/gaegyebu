@@ -2,11 +2,9 @@ import { NextRequest, NextResponse } from 'next/server'
 import prisma from '@/lib/db'
 import { getSid } from '@/lib/session'
 
-export async function GET(req: NextRequest) {
+export async function GET(_req: NextRequest) {
   try {
-    const sid   = getSid(req)
     const memos = await prisma.memo.findMany({
-      where:   { sessionId: sid },
       orderBy: [{ starred: 'desc' }, { date: 'desc' }, { createdAt: 'desc' }],
     })
     return NextResponse.json(memos)
