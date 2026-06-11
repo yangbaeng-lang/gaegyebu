@@ -299,14 +299,14 @@ export default function HistoryPage() {
                     <p className="text-sm font-medium flex-shrink-0" style={{ color: TYPE_COLOR[tx.type] }}>
                       {tx.type === 'expense' ? '-' : tx.type === 'income' ? (tx.amount >= 0 ? '+' : '') : tx.type === 'income_expense' ? '±' : ''}{tx.amount.toLocaleString()}원
                     </p>
-                    <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
+                    <div className="flex gap-1 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity flex-shrink-0">
                       <button onClick={() => openEdit(tx)}
-                        className="w-6 h-6 flex items-center justify-center rounded text-gray-300 hover:text-blue-500 hover:bg-blue-50">
-                        <i className="ti ti-pencil text-xs" />
+                        className="w-7 h-7 flex items-center justify-center rounded text-gray-300 hover:text-blue-500 hover:bg-blue-50 active:bg-blue-50">
+                        <i className="ti ti-pencil text-sm" />
                       </button>
                       <button onClick={() => handleDelete(tx.id)}
-                        className="w-6 h-6 flex items-center justify-center rounded text-gray-300 hover:text-red-500 hover:bg-red-50">
-                        <i className="ti ti-trash text-xs" />
+                        className="w-7 h-7 flex items-center justify-center rounded text-gray-300 hover:text-red-500 hover:bg-red-50 active:bg-red-50">
+                        <i className="ti ti-trash text-sm" />
                       </button>
                     </div>
                   </div>
@@ -399,7 +399,7 @@ export default function HistoryPage() {
                       <span className="text-right tabular-nums font-medium" style={{ color: TYPE_COLOR[tx.type] }}>
                         {tx.amount.toLocaleString()}
                       </span>
-                      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity justify-end"
+                      <div className="flex items-center gap-1 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity justify-end"
                         onMouseDown={ev => ev.stopPropagation()}>
                         <button className="w-6 h-6 flex items-center justify-center rounded text-gray-300 hover:text-blue-500 hover:bg-blue-50"
                           onClick={ev => { ev.stopPropagation(); openEdit(tx) }}>
@@ -464,7 +464,7 @@ export default function HistoryPage() {
                         style={{ color: balance >= 0 ? '#1a1f2e' : '#d94f4f' }}>
                         {balance.toLocaleString()}
                       </span>
-                      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity justify-end"
+                      <div className="flex items-center gap-1 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity justify-end"
                         onMouseDown={ev => ev.stopPropagation()}>
                         <button className="w-6 h-6 flex items-center justify-center rounded text-gray-300 hover:text-blue-500 hover:bg-blue-50"
                           onClick={ev => { ev.stopPropagation(); openEdit(tx) }}>
