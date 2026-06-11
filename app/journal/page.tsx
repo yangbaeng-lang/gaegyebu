@@ -525,8 +525,8 @@ export default function JournalPage() {
               )}
             </div>
 
-            {/* 거래내역 테이블 */}
-            <div className="bg-white border border-gray-100 rounded-xl overflow-hidden select-none"
+            {/* 거래내역 테이블 (PC) */}
+            <div className="hidden md:block bg-white border border-gray-100 rounded-xl overflow-hidden select-none"
               onMouseUp={() => { mainMouseDownRef.current = false }}
               onMouseLeave={() => { mainMouseDownRef.current = false }}>
 
@@ -615,6 +615,77 @@ export default function JournalPage() {
                         <span className="text-right tabular-nums" style={{ color: '#4a6fdb' }}>{fmt(fDr)}</span>
                         <span className="text-right tabular-nums" style={{ color: '#f0a020' }}>{fmt(fCr)}</span>
                         <span className="col-span-2" />
+                      </div>
+                    )
+                  })()}
+                </>
+              )}
+            </div>
+
+            {/* 거래내역 카드 리스트 (모바일) */}
+            <div className="md:hidden bg-white border border-gray-100 rounded-xl overflow-hidden">
+              {filtered.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-16 text-gray-300 text-xs gap-2">
+                  <i className="ti ti-receipt-off text-3xl" />거래 내역이 없습니다
+                </div>
+              ) : (
+                <>
+                  {filtered.map(e => {
+                    const drMeta = ACCT_META[e.dr.acctType]
+                    const crMeta = ACCT_META[e.cr.acctType]
+                    const d = new Date(e.date)
+                    return (
+                      <div key={e.txId} className="flex items-start gap-2 px-3 py-2.5 border-b border-gray-50 last:border-0">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between gap-2 mb-1">
+                            <button className="text-xs font-medium text-gray-800 truncate text-left hover:text-blue-600 transition-colors"
+                              onClick={() => openPanel({ type: 'desc', desc: e.desc })}>
+                              {e.desc}
+                            </button>
+                            <span className="text-[10px] text-gray-400 flex-shrink-0 whitespace-nowrap">
+                              {e.date.slice(5)} ({DOW[d.getDay()]})
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-1 text-[10px] text-gray-500 flex-wrap">
+                            <button className="flex items-center gap-1 hover:text-blue-500 transition-colors min-w-0"
+                              onClick={() => openPanel({ type: 'account', name: e.cr.acctName, acctType: e.cr.acctType })}>
+                              <span className="text-[9px] px-1 py-0.5 rounded font-medium flex-shrink-0"
+                                style={{ background: crMeta.bg, color: crMeta.color }}>{crMeta.label}</span>
+                              <span className="truncate max-w-[88px]">{e.cr.acctName}</span>
+                            </button>
+                            <i className="ti ti-arrow-right text-[9px] text-gray-300 flex-shrink-0" />
+                            <button className="flex items-center gap-1 hover:text-blue-500 transition-colors min-w-0"
+                              onClick={() => openPanel({ type: 'account', name: e.dr.acctName, acctType: e.dr.acctType })}>
+                              <span className="text-[9px] px-1 py-0.5 rounded font-medium flex-shrink-0"
+                                style={{ background: drMeta.bg, color: drMeta.color }}>{drMeta.label}</span>
+                              <span className="truncate max-w-[88px]">{e.dr.acctName}</span>
+                            </button>
+                          </div>
+                        </div>
+                        <div className="flex flex-col items-end gap-1 flex-shrink-0">
+                          <span className="text-sm font-medium tabular-nums" style={{ color: TYPE_COLOR[e.txType] }}>
+                            {e.dr.amount.toLocaleString()}원
+                          </span>
+                          <div className="flex gap-1">
+                            <button onClick={() => openEdit(e.tx)}
+                              className="w-7 h-7 flex items-center justify-center rounded text-gray-300 hover:text-blue-500 hover:bg-blue-50 active:bg-blue-50">
+                              <i className="ti ti-pencil text-sm" />
+                            </button>
+                            <button onClick={() => handleDelete(e.txId)}
+                              className="w-7 h-7 flex items-center justify-center rounded text-gray-300 hover:text-red-500 hover:bg-red-50 active:bg-red-50">
+                              <i className="ti ti-trash text-sm" />
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    )
+                  })}
+                  {(() => {
+                    const fDr = filtered.reduce((s, e) => s + e.dr.amount, 0)
+                    return (
+                      <div className="flex items-center justify-between px-3 py-2.5 bg-gray-50 border-t border-gray-200 text-xs font-semibold">
+                        <span className="text-gray-500">{filtered.length}건 합계</span>
+                        <span className="tabular-nums" style={{ color: '#4a6fdb' }}>{fmt(fDr)}</span>
                       </div>
                     )
                   })()}
@@ -742,7 +813,7 @@ export default function JournalPage() {
                         style={{ color: balance >= 0 ? '#1a1f2e' : '#d94f4f' }}>
                         {balance.toLocaleString()}
                       </span>
-                      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity justify-end"
+                      <div className="flex items-center gap-1 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity justify-end"
                         onMouseDown={ev => ev.stopPropagation()}>
                         <button className="w-6 h-6 flex items-center justify-center rounded text-gray-300 hover:text-blue-500 hover:bg-blue-50"
                           onClick={ev => { ev.stopPropagation(); openEdit(tx) }}>
@@ -809,7 +880,7 @@ export default function JournalPage() {
                       <span className="text-right tabular-nums font-medium" style={{ color: '#4a6fdb' }}>
                         {tx.amount.toLocaleString()}
                       </span>
-                      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity justify-end"
+                      <div className="flex items-center gap-1 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity justify-end"
                         onMouseDown={ev => ev.stopPropagation()}>
                         <button className="w-6 h-6 flex items-center justify-center rounded text-gray-300 hover:text-blue-500 hover:bg-blue-50"
                           onClick={ev => { ev.stopPropagation(); openEdit(tx) }}>
