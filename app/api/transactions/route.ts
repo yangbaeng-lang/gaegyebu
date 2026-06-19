@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import prisma from '@/lib/db'
 import { getSid } from '@/lib/session'
+import { inferTxType } from '@/lib/txType'
 
 export async function GET(req: NextRequest) {
   const { searchParams } = req.nextUrl
@@ -42,12 +43,14 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   const body = await req.json()
-  const { type, date, desc, amount, fromAcct, toAcct, memo } = body
+  const { date, desc, amount, fromAcct, toAcct, memo } = body
   const sid = getSid(req)
 
-  if (!type || !date || !desc || !amount || !fromAcct || !toAcct) {
+  if (!date || !desc || !amount || !fromAcct || !toAcct) {
     return NextResponse.json({ error: '필수 필드가 누락되었습니다' }, { status: 400 })
   }
+
+  const type = await inferTxType(sid, fromAcct, toAcct)
 
   const tx = await prisma.transaction.create({
     data: { sessionId: sid, type, date, desc, amount: Number(amount), fromAcct, toAcct, memo: memo ?? '' },
