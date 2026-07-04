@@ -8,6 +8,7 @@ const TABS = [
   { href: '/pension-charts/overview',    label: '직접투자 연금', icon: 'ti-chart-area-line'  },
   { href: '/pension-charts/breakdown',    label: '세부내역 비율', icon: 'ti-chart-pie'        },
   { href: '/pension-charts/allocation',  label: '직접투자 비중', icon: 'ti-chart-donut'      },
+  { href: '/pension-charts/dividend',    label: '배당금',       icon: 'ti-coin'             },
 ]
 
 export default function PensionChartsLayout({ children }: { children: React.ReactNode }) {

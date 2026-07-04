@@ -130,8 +130,25 @@ export default function OverviewPage() {
   const [cumulLoading,  setCumulLoading]  = useState(false)
   const [cumulVisible,  setCumulVisible]  = useState<Set<number>>(new Set())
   const cumulAbortRef = useRef<AbortController | null>(null)
+  const cumulTableRef = useRef<HTMLDivElement>(null)
+  const [cumulTableW, setCumulTableW] = useState(0)
   const [sectionBudget, setSectionBudget] = useState<SectionBudgetData | null>(null)
   const [selPeriod,     setSelPeriod]     = useState('')
+
+  useEffect(() => {
+    const el = cumulTableRef.current
+    if (!el) return
+    const ro = new ResizeObserver(() => setCumulTableW(el.clientWidth))
+    ro.observe(el)
+    setCumulTableW(el.clientWidth)
+    return () => ro.disconnect()
+  }, [cumulData.series.length > 0])
+
+  useEffect(() => {
+    if (!cumulTableRef.current) return
+    const el = cumulTableRef.current
+    requestAnimationFrame(() => { el.scrollLeft = el.scrollWidth })
+  }, [cumulData, cumulTableW])
 
   const fetchSeries = (m: string, ids: Set<number>) => {
     if (ids.size === 0) { setSeries([]); setSeriesLoading(false); return Promise.resolve() }
@@ -472,6 +489,56 @@ export default function OverviewPage() {
                   )
                 })()}
             </div>
+            {!cumulLoading && cumulData.series.length > 0 && (() => {
+              const LABEL_W = 72
+              const visibleSessions = cumulData.sessions.filter(s => cumulVisible.has(s.id))
+              const maxDigits = cumulData.series.reduce((max, row) => {
+                const total = visibleSessions.reduce((sum, s) => sum + (Number(row[s.name]) || 0), 0)
+                const cellLens = visibleSessions.map(s => fmtFull(Number(row[s.name]) || 0).length).concat(fmtFull(total).length)
+                return Math.max(max, ...cellLens)
+              }, 0)
+              const MIN_COL_W = Math.max(108, maxDigits * 7 + 24)
+              const colW = Math.max(cumulTableW > 0 ? Math.floor((cumulTableW - LABEL_W) / VISIBLE) : 60, MIN_COL_W)
+              const tableW = Math.max(LABEL_W + cumulData.series.length * colW, cumulTableW)
+              return (
+              <div ref={cumulTableRef} className="mt-3 pt-3 border-t border-gray-100 overflow-x-auto flex-shrink-0">
+                <table className="text-xs border-collapse" style={{ width: tableW || '100%', tableLayout: 'fixed' }}>
+                  <colgroup>
+                    <col style={{ width: LABEL_W }} />
+                    {cumulData.series.map(row => <col key={String(row.period)} style={{ width: colW }} />)}
+                  </colgroup>
+                  <thead>
+                    <tr>
+                      <th className="text-left text-gray-400 font-medium py-1 pr-3 sticky left-0 bg-white whitespace-nowrap">구분</th>
+                      {cumulData.series.map(row => (
+                        <th key={String(row.period)} className="text-right text-gray-400 font-medium py-1 px-2 whitespace-nowrap">{row.label as string}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {cumulData.sessions.map((s, i) => {
+                      if (!cumulVisible.has(s.id)) return null
+                      return (
+                        <tr key={s.id} className="border-t border-gray-50">
+                          <td className="text-left py-1 pr-3 font-semibold whitespace-nowrap sticky left-0 bg-white" style={{ color: SECTION_COLORS[i % SECTION_COLORS.length] }}>{s.name}</td>
+                          {cumulData.series.map(row => (
+                            <td key={String(row.period)} className="text-right py-1 px-2 tabular-nums whitespace-nowrap text-gray-700">{fmtFull(Number(row[s.name]) || 0)}</td>
+                          ))}
+                        </tr>
+                      )
+                    })}
+                    <tr className="border-t border-gray-200">
+                      <td className="text-left py-1 pr-3 font-bold whitespace-nowrap sticky left-0 bg-white text-gray-700">합계</td>
+                      {cumulData.series.map(row => {
+                        const total = cumulData.sessions.reduce((sum, sess) => sum + (cumulVisible.has(sess.id) ? (Number(row[sess.name]) || 0) : 0), 0)
+                        return <td key={String(row.period)} className="text-right py-1 px-2 tabular-nums whitespace-nowrap font-bold text-gray-900">{fmtFull(total)}</td>
+                      })}
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              )
+            })()}
           </div>
         </div>
 

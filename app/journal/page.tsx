@@ -3,6 +3,7 @@ import { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import { fmt } from '@/lib/utils'
 import { restoreQuickTxDate } from '@/lib/quickTxUtils'
 import GroupedSelect from '@/components/GroupedSelect'
+import AccountPickerModal from '@/components/AccountPickerModal'
 import AmountInput from '@/components/AmountInput'
 import PeriodNav from '@/components/PeriodNav'
 import Link from 'next/link'
@@ -105,6 +106,8 @@ export default function JournalPage() {
   const [bulkEditOpen,    setBulkEditOpen]    = useState(false)
   const [bulkEditTarget,  setBulkEditTarget]  = useState<'main' | 'panel'>('main')
   const [bulkForm,        setBulkForm]        = useState({ applyDate: false, date: '', applyDesc: false, desc: '', applyFrom: false, fromAcct: '', applyTo: false, toAcct: '', applyAmount: false, amount: 0 })
+  const [acctPicker,     setAcctPicker]     = useState<{ field: 'from' | 'to' } | null>(null)
+  const [bulkAcctPicker, setBulkAcctPicker] = useState<{ field: 'from' | 'to' } | null>(null)
   const panelMouseDownRef = useRef(false)
   const panelDragStartIdx = useRef(-1)
   const panelLastDragIdx  = useRef(-1)
@@ -944,21 +947,21 @@ export default function JournalPage() {
             <div className="grid grid-cols-2 gap-2">
               <div>
                 <label className="text-xs text-gray-400 block mb-1">출금 <span className="text-gray-300">— 나가는 곳</span></label>
-                <GroupedSelect
-                  value={editForm.fromAcct}
-                  onChange={v => setEditForm(f => f ? { ...f, fromAcct: v } : f)}
-                  groups={editFromGroups}
-                  extraOpt={!allFromOpts.includes(editForm.fromAcct) ? editForm.fromAcct : undefined}
-                />
+                <button type="button"
+                  onClick={() => setAcctPicker({ field: 'from' })}
+                  className="w-full flex items-center justify-between text-xs border border-gray-200 rounded-lg px-2 h-8 hover:border-blue-300 bg-white focus:outline-none transition-colors">
+                  <span className={editForm.fromAcct ? 'text-gray-800 truncate' : 'text-gray-400'}>{editForm.fromAcct || '선택'}</span>
+                  <i className="ti ti-chevron-right text-gray-400 text-[10px] flex-shrink-0 ml-1" />
+                </button>
               </div>
               <div>
                 <label className="text-xs text-gray-400 block mb-1">입금 <span className="text-gray-300">— 들어오는 곳</span></label>
-                <GroupedSelect
-                  value={editForm.toAcct}
-                  onChange={v => setEditForm(f => f ? { ...f, toAcct: v } : f)}
-                  groups={editToGroups}
-                  extraOpt={!allToOpts.includes(editForm.toAcct) ? editForm.toAcct : undefined}
-                />
+                <button type="button"
+                  onClick={() => setAcctPicker({ field: 'to' })}
+                  className="w-full flex items-center justify-between text-xs border border-gray-200 rounded-lg px-2 h-8 hover:border-blue-300 bg-white focus:outline-none transition-colors">
+                  <span className={editForm.toAcct ? 'text-gray-800 truncate' : 'text-gray-400'}>{editForm.toAcct || '선택'}</span>
+                  <i className="ti ti-chevron-right text-gray-400 text-[10px] flex-shrink-0 ml-1" />
+                </button>
               </div>
             </div>
             <div>
@@ -982,6 +985,29 @@ export default function JournalPage() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* ── 계좌 선택 모달 ─────────────────────────────────── */}
+      {acctPicker && editForm && (
+        acctPicker.field === 'from' ? (
+          <AccountPickerModal
+            title="출금 — 나가는 곳"
+            value={editForm.fromAcct}
+            groups={editFromGroups}
+            extraOpt={!allFromOpts.includes(editForm.fromAcct) ? editForm.fromAcct : undefined}
+            onSelect={v => setEditForm(f => f ? { ...f, fromAcct: v } : f)}
+            onClose={() => setAcctPicker(null)}
+          />
+        ) : (
+          <AccountPickerModal
+            title="입금 — 들어오는 곳"
+            value={editForm.toAcct}
+            groups={editToGroups}
+            extraOpt={!allToOpts.includes(editForm.toAcct) ? editForm.toAcct : undefined}
+            onSelect={v => setEditForm(f => f ? { ...f, toAcct: v } : f)}
+            onClose={() => setAcctPicker(null)}
+          />
+        )
       )}
 
       {/* ── 일괄 수정 모달 ─────────────────────────────────── */}
@@ -1037,10 +1063,12 @@ export default function JournalPage() {
                 <span className={`text-xs ${bulkForm.applyFrom ? 'text-gray-700 font-medium' : 'text-gray-400'}`}>출금</span>
               </label>
               <div className={`flex-1 transition-opacity ${bulkForm.applyFrom ? '' : 'opacity-40 pointer-events-none'}`}>
-                <GroupedSelect value={bulkForm.fromAcct}
-                  onChange={v => setBulkForm(f => ({ ...f, fromAcct: v }))}
-                  groups={editFromGroups}
-                  extraOpt={!editFromGroups.flatMap(g => g.opts).includes(bulkForm.fromAcct) && bulkForm.fromAcct ? bulkForm.fromAcct : undefined} />
+                <button type="button"
+                  onClick={() => bulkForm.applyFrom && setBulkAcctPicker({ field: 'from' })}
+                  className="w-full flex items-center justify-between text-xs border border-gray-200 rounded-lg px-2 h-8 hover:border-blue-300 bg-white focus:outline-none transition-colors">
+                  <span className={bulkForm.fromAcct ? 'text-gray-800 truncate' : 'text-gray-400'}>{bulkForm.fromAcct || '선택'}</span>
+                  <i className="ti ti-chevron-right text-gray-400 text-[10px] flex-shrink-0 ml-1" />
+                </button>
               </div>
             </div>
 
@@ -1053,10 +1081,12 @@ export default function JournalPage() {
                 <span className={`text-xs ${bulkForm.applyTo ? 'text-gray-700 font-medium' : 'text-gray-400'}`}>입금</span>
               </label>
               <div className={`flex-1 transition-opacity ${bulkForm.applyTo ? '' : 'opacity-40 pointer-events-none'}`}>
-                <GroupedSelect value={bulkForm.toAcct}
-                  onChange={v => setBulkForm(f => ({ ...f, toAcct: v }))}
-                  groups={editToGroups}
-                  extraOpt={!editToGroups.flatMap(g => g.opts).includes(bulkForm.toAcct) && bulkForm.toAcct ? bulkForm.toAcct : undefined} />
+                <button type="button"
+                  onClick={() => bulkForm.applyTo && setBulkAcctPicker({ field: 'to' })}
+                  className="w-full flex items-center justify-between text-xs border border-gray-200 rounded-lg px-2 h-8 hover:border-blue-300 bg-white focus:outline-none transition-colors">
+                  <span className={bulkForm.toAcct ? 'text-gray-800 truncate' : 'text-gray-400'}>{bulkForm.toAcct || '선택'}</span>
+                  <i className="ti ti-chevron-right text-gray-400 text-[10px] flex-shrink-0 ml-1" />
+                </button>
               </div>
             </div>
 
@@ -1086,6 +1116,28 @@ export default function JournalPage() {
             </div>
           </div>
         </div>
+      )}
+
+      {bulkAcctPicker && (
+        bulkAcctPicker.field === 'from' ? (
+          <AccountPickerModal
+            title="출금 — 나가는 곳"
+            value={bulkForm.fromAcct}
+            groups={editFromGroups}
+            extraOpt={!allFromOpts.includes(bulkForm.fromAcct) && bulkForm.fromAcct ? bulkForm.fromAcct : undefined}
+            onSelect={v => setBulkForm(f => ({ ...f, fromAcct: v }))}
+            onClose={() => setBulkAcctPicker(null)}
+          />
+        ) : (
+          <AccountPickerModal
+            title="입금 — 들어오는 곳"
+            value={bulkForm.toAcct}
+            groups={editToGroups}
+            extraOpt={!allToOpts.includes(bulkForm.toAcct) && bulkForm.toAcct ? bulkForm.toAcct : undefined}
+            onSelect={v => setBulkForm(f => ({ ...f, toAcct: v }))}
+            onClose={() => setBulkAcctPicker(null)}
+          />
+        )
       )}
 
       {toast && (

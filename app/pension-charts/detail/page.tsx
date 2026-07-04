@@ -103,6 +103,7 @@ function ScrollChart({ data, children }: { data: any[]; children: (w: number, h:
   return (
     <>
       <style>{`
+        .pd-scroll{overflow-anchor:none}
         .pd-scroll::-webkit-scrollbar{height:4px}
         .pd-scroll::-webkit-scrollbar-track{background:#f1f5f9;border-radius:4px}
         .pd-scroll::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:4px;min-width:24px}

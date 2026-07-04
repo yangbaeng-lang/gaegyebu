@@ -5,6 +5,7 @@ import PeriodNav from '@/components/PeriodNav'
 import { usePeriod } from '@/lib/usePeriod'
 import AmountInput from '@/components/AmountInput'
 import GroupedSelect from '@/components/GroupedSelect'
+import AccountPickerModal from '@/components/AccountPickerModal'
 import { QuickTx, loadQuickTxs, saveQuickTxs as saveQTxs, restoreQuickTxDate } from '@/lib/quickTxUtils'
 import { useSession } from '@/lib/SessionContext'
 
@@ -141,8 +142,9 @@ export default function InsertPage() {
     desc: '', amount: 0, memo: '', fromAcct: '', toAcct: '',
   })
   const [txs,       setTxs]       = useState<Tx[]>([])
-  const [editTx,    setEditTx]    = useState<Tx | null>(null)
-  const [editForm,  setEditForm]  = useState<Tx | null>(null)
+  const [editTx,      setEditTx]      = useState<Tx | null>(null)
+  const [editForm,    setEditForm]    = useState<Tx | null>(null)
+  const [acctPicker,  setAcctPicker]  = useState<{ field: 'from' | 'to'; modal: 'edit' | 'quick' } | null>(null)
   const [toast,     setToast]     = useState('')
   const [quickTxs,     setQuickTxs]     = useState<QuickTx[]>([])
   const [editQuickId,  setEditQuickId]  = useState<string | null>(null)
@@ -592,21 +594,21 @@ export default function InsertPage() {
             <div className="grid grid-cols-2 gap-2">
               <div>
                 <label className="text-xs text-gray-400 block mb-1">출금 <span className="text-gray-300">— 나가는 곳</span></label>
-                <GroupedSelect
-                  value={editQuickForm.fromAcct}
-                  onChange={v => setEditQuickForm(f => f ? { ...f, fromAcct: v } : f)}
-                  groups={editFromGroups}
-                  extraOpt={!allFromOpts.includes(editQuickForm.fromAcct) ? editQuickForm.fromAcct : undefined}
-                />
+                <button type="button"
+                  onClick={() => setAcctPicker({ field: 'from', modal: 'quick' })}
+                  className="w-full flex items-center justify-between text-xs border border-gray-200 rounded-lg px-2 h-8 hover:border-blue-300 bg-white focus:outline-none transition-colors">
+                  <span className={editQuickForm.fromAcct ? 'text-gray-800 truncate' : 'text-gray-400'}>{editQuickForm.fromAcct || '선택'}</span>
+                  <i className="ti ti-chevron-right text-gray-400 text-[10px] flex-shrink-0 ml-1" />
+                </button>
               </div>
               <div>
                 <label className="text-xs text-gray-400 block mb-1">입금 <span className="text-gray-300">— 들어오는 곳</span></label>
-                <GroupedSelect
-                  value={editQuickForm.toAcct}
-                  onChange={v => setEditQuickForm(f => f ? { ...f, toAcct: v } : f)}
-                  groups={editToGroups}
-                  extraOpt={!allToOpts.includes(editQuickForm.toAcct) ? editQuickForm.toAcct : undefined}
-                />
+                <button type="button"
+                  onClick={() => setAcctPicker({ field: 'to', modal: 'quick' })}
+                  className="w-full flex items-center justify-between text-xs border border-gray-200 rounded-lg px-2 h-8 hover:border-blue-300 bg-white focus:outline-none transition-colors">
+                  <span className={editQuickForm.toAcct ? 'text-gray-800 truncate' : 'text-gray-400'}>{editQuickForm.toAcct || '선택'}</span>
+                  <i className="ti ti-chevron-right text-gray-400 text-[10px] flex-shrink-0 ml-1" />
+                </button>
               </div>
             </div>
             <div>
@@ -658,21 +660,21 @@ export default function InsertPage() {
             <div className="grid grid-cols-2 gap-2">
               <div>
                 <label className="text-xs text-gray-400 block mb-1">출금 <span className="text-gray-300">— 나가는 곳</span></label>
-                <GroupedSelect
-                  value={editForm.fromAcct}
-                  onChange={v => setEditForm(f => f ? { ...f, fromAcct: v } : f)}
-                  groups={editFromGroups}
-                  extraOpt={!allFromOpts.includes(editForm.fromAcct) ? editForm.fromAcct : undefined}
-                />
+                <button type="button"
+                  onClick={() => setAcctPicker({ field: 'from', modal: 'edit' })}
+                  className="w-full flex items-center justify-between text-xs border border-gray-200 rounded-lg px-2 h-8 hover:border-blue-300 bg-white focus:outline-none transition-colors">
+                  <span className={editForm.fromAcct ? 'text-gray-800 truncate' : 'text-gray-400'}>{editForm.fromAcct || '선택'}</span>
+                  <i className="ti ti-chevron-right text-gray-400 text-[10px] flex-shrink-0 ml-1" />
+                </button>
               </div>
               <div>
                 <label className="text-xs text-gray-400 block mb-1">입금 <span className="text-gray-300">— 들어오는 곳</span></label>
-                <GroupedSelect
-                  value={editForm.toAcct}
-                  onChange={v => setEditForm(f => f ? { ...f, toAcct: v } : f)}
-                  groups={editToGroups}
-                  extraOpt={!allToOpts.includes(editForm.toAcct) ? editForm.toAcct : undefined}
-                />
+                <button type="button"
+                  onClick={() => setAcctPicker({ field: 'to', modal: 'edit' })}
+                  className="w-full flex items-center justify-between text-xs border border-gray-200 rounded-lg px-2 h-8 hover:border-blue-300 bg-white focus:outline-none transition-colors">
+                  <span className={editForm.toAcct ? 'text-gray-800 truncate' : 'text-gray-400'}>{editForm.toAcct || '선택'}</span>
+                  <i className="ti ti-chevron-right text-gray-400 text-[10px] flex-shrink-0 ml-1" />
+                </button>
               </div>
             </div>
             <div>
@@ -696,6 +698,50 @@ export default function InsertPage() {
             </div>
           </div>
         </div>
+      )}
+
+      {acctPicker && (
+        acctPicker.modal === 'edit' && editForm ? (
+          acctPicker.field === 'from' ? (
+            <AccountPickerModal
+              title="출금 — 나가는 곳"
+              value={editForm.fromAcct}
+              groups={editFromGroups}
+              extraOpt={!allFromOpts.includes(editForm.fromAcct) ? editForm.fromAcct : undefined}
+              onSelect={v => setEditForm(f => f ? { ...f, fromAcct: v } : f)}
+              onClose={() => setAcctPicker(null)}
+            />
+          ) : (
+            <AccountPickerModal
+              title="입금 — 들어오는 곳"
+              value={editForm.toAcct}
+              groups={editToGroups}
+              extraOpt={!allToOpts.includes(editForm.toAcct) ? editForm.toAcct : undefined}
+              onSelect={v => setEditForm(f => f ? { ...f, toAcct: v } : f)}
+              onClose={() => setAcctPicker(null)}
+            />
+          )
+        ) : acctPicker.modal === 'quick' && editQuickForm ? (
+          acctPicker.field === 'from' ? (
+            <AccountPickerModal
+              title="출금 — 나가는 곳"
+              value={editQuickForm.fromAcct}
+              groups={editFromGroups}
+              extraOpt={!allFromOpts.includes(editQuickForm.fromAcct) ? editQuickForm.fromAcct : undefined}
+              onSelect={v => setEditQuickForm(f => f ? { ...f, fromAcct: v } : f)}
+              onClose={() => setAcctPicker(null)}
+            />
+          ) : (
+            <AccountPickerModal
+              title="입금 — 들어오는 곳"
+              value={editQuickForm.toAcct}
+              groups={editToGroups}
+              extraOpt={!allToOpts.includes(editQuickForm.toAcct) ? editQuickForm.toAcct : undefined}
+              onSelect={v => setEditQuickForm(f => f ? { ...f, toAcct: v } : f)}
+              onClose={() => setAcctPicker(null)}
+            />
+          )
+        ) : null
       )}
 
       {toast && (

@@ -1,3 +1,8 @@
 git add app/layout.tsx app/page.tsx components/SideNav.tsx
 git commit -m "모바일 반응형 레이아웃 추가"
 git push
+
+
+git add .
+git commit -m "feat: 연금차트 우주 자산군 추가"
+git push

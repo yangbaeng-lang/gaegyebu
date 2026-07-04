@@ -2,6 +2,7 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import { ComposedChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceLine } from 'recharts'
 import GroupedSelect from '@/components/GroupedSelect'
+import AccountPickerModal from '@/components/AccountPickerModal'
 import AmountInput from '@/components/AmountInput'
 import { fmt, CAT_META } from '@/lib/utils'
 import PeriodNav from '@/components/PeriodNav'
@@ -40,6 +41,7 @@ export default function AnalyticsPage() {
   const [collapsedGrps,    setCollapsedGrps]    = useState<Record<string, boolean>>({})
   const [editTx,           setEditTx]           = useState<Tx | null>(null)
   const [editForm,         setEditForm]         = useState<Tx | null>(null)
+  const [acctPicker,       setAcctPicker]       = useState<{ field: 'from' | 'to' } | null>(null)
   const [toast,            setToast]            = useState('')
   const [txKey,            setTxKey]            = useState(0)
   const [selectedIds,      setSelectedIds]      = useState<Set<number>>(new Set())
@@ -580,17 +582,21 @@ export default function AnalyticsPage() {
             <div className="grid grid-cols-2 gap-2">
               <div>
                 <label className="text-xs text-gray-400 block mb-1">출금 <span className="text-gray-300">— 나가는 곳</span></label>
-                <GroupedSelect value={editForm.fromAcct}
-                  onChange={v => setEditForm(f => f ? { ...f, fromAcct: v } : f)}
-                  groups={editFromGroups}
-                  extraOpt={!allFromOpts.includes(editForm.fromAcct) ? editForm.fromAcct : undefined} />
+                <button type="button"
+                  onClick={() => setAcctPicker({ field: 'from' })}
+                  className="w-full flex items-center justify-between text-xs border border-gray-200 rounded-lg px-2 h-8 hover:border-blue-300 bg-white focus:outline-none transition-colors">
+                  <span className={editForm.fromAcct ? 'text-gray-800 truncate' : 'text-gray-400'}>{editForm.fromAcct || '선택'}</span>
+                  <i className="ti ti-chevron-right text-gray-400 text-[10px] flex-shrink-0 ml-1" />
+                </button>
               </div>
               <div>
                 <label className="text-xs text-gray-400 block mb-1">입금 <span className="text-gray-300">— 들어오는 곳</span></label>
-                <GroupedSelect value={editForm.toAcct}
-                  onChange={v => setEditForm(f => f ? { ...f, toAcct: v } : f)}
-                  groups={editToGroups}
-                  extraOpt={!allToOpts.includes(editForm.toAcct) ? editForm.toAcct : undefined} />
+                <button type="button"
+                  onClick={() => setAcctPicker({ field: 'to' })}
+                  className="w-full flex items-center justify-between text-xs border border-gray-200 rounded-lg px-2 h-8 hover:border-blue-300 bg-white focus:outline-none transition-colors">
+                  <span className={editForm.toAcct ? 'text-gray-800 truncate' : 'text-gray-400'}>{editForm.toAcct || '선택'}</span>
+                  <i className="ti ti-chevron-right text-gray-400 text-[10px] flex-shrink-0 ml-1" />
+                </button>
               </div>
             </div>
             <div>
@@ -614,6 +620,28 @@ export default function AnalyticsPage() {
             </div>
           </div>
         </div>
+      )}
+
+      {acctPicker && editForm && (
+        acctPicker.field === 'from' ? (
+          <AccountPickerModal
+            title="출금 — 나가는 곳"
+            value={editForm.fromAcct}
+            groups={editFromGroups}
+            extraOpt={!allFromOpts.includes(editForm.fromAcct) ? editForm.fromAcct : undefined}
+            onSelect={v => setEditForm(f => f ? { ...f, fromAcct: v } : f)}
+            onClose={() => setAcctPicker(null)}
+          />
+        ) : (
+          <AccountPickerModal
+            title="입금 — 들어오는 곳"
+            value={editForm.toAcct}
+            groups={editToGroups}
+            extraOpt={!allToOpts.includes(editForm.toAcct) ? editForm.toAcct : undefined}
+            onSelect={v => setEditForm(f => f ? { ...f, toAcct: v } : f)}
+            onClose={() => setAcctPicker(null)}
+          />
+        )
       )}
 
       {toast && (

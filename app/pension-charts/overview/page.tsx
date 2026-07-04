@@ -67,6 +67,7 @@ function ScrollChart({ data, children }: { data: any[]; children: (w: number, h:
   return (
     <>
       <style>{`
+        .pc-scroll{overflow-anchor:none}
         .pc-scroll::-webkit-scrollbar{height:8px}
         .pc-scroll::-webkit-scrollbar-track{background:#f1f5f9;border-radius:4px}
         .pc-scroll::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:4px;min-width:28px}

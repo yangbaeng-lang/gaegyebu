@@ -1,6 +1,7 @@
 'use client'
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import { fmt } from '@/lib/utils'
+import AccountPickerModal from '@/components/AccountPickerModal'
 import PeriodNav from '@/components/PeriodNav'
 import { usePeriod } from '@/lib/usePeriod'
 import { exportTransactions } from '@/lib/exportExcel'
@@ -41,8 +42,9 @@ export default function HistoryPage() {
   const [txs, setTxs]           = useState<Tx[]>([])
   const [summary, setSummary]   = useState({ income: 0, expense: 0, net: 0, count: 0 })
   const [cats, setCats]         = useState<Cats>({ account_asset: [], account_liability: [], expense: [], income: [], networth: [] })
-  const [editTx, setEditTx]     = useState<Tx | null>(null)
-  const [editForm, setEditForm] = useState<Tx | null>(null)
+  const [editTx,     setEditTx]     = useState<Tx | null>(null)
+  const [editForm,   setEditForm]   = useState<Tx | null>(null)
+  const [acctPicker, setAcctPicker] = useState<{ field: 'from' | 'to' } | null>(null)
   const [toast, setToast]       = useState('')
 
   const [modal,       setModal]       = useState<ModalState | null>(null)
@@ -528,30 +530,22 @@ export default function HistoryPage() {
             </div>
             <div className="grid grid-cols-2 gap-2">
               <div>
-                <label className="text-xs text-gray-400 block mb-1">출금</label>
-                <select value={editForm.fromAcct}
-                  onChange={e => setEditForm(f => f ? { ...f, fromAcct: e.target.value } : f)}
-                  className="w-full text-xs border border-gray-200 rounded-lg px-2 h-8 focus:outline-none focus:border-blue-300">
-                  {fromGroups.map(g => g.opts.length > 0 && (
-                    <optgroup key={g.label} label={g.label}>
-                      {g.opts.map((a: string) => <option key={a}>{a}</option>)}
-                    </optgroup>
-                  ))}
-                  {!allFromOpts.includes(editForm.fromAcct) && <option>{editForm.fromAcct}</option>}
-                </select>
+                <label className="text-xs text-gray-400 block mb-1">출금 <span className="text-gray-300">— 나가는 곳</span></label>
+                <button type="button"
+                  onClick={() => setAcctPicker({ field: 'from' })}
+                  className="w-full flex items-center justify-between text-xs border border-gray-200 rounded-lg px-2 h-8 hover:border-blue-300 bg-white focus:outline-none transition-colors">
+                  <span className={editForm.fromAcct ? 'text-gray-800 truncate' : 'text-gray-400'}>{editForm.fromAcct || '선택'}</span>
+                  <i className="ti ti-chevron-right text-gray-400 text-[10px] flex-shrink-0 ml-1" />
+                </button>
               </div>
               <div>
-                <label className="text-xs text-gray-400 block mb-1">입금</label>
-                <select value={editForm.toAcct}
-                  onChange={e => setEditForm(f => f ? { ...f, toAcct: e.target.value } : f)}
-                  className="w-full text-xs border border-gray-200 rounded-lg px-2 h-8 focus:outline-none focus:border-blue-300">
-                  {toGroups.map(g => g.opts.length > 0 && (
-                    <optgroup key={g.label} label={g.label}>
-                      {g.opts.map((a: string) => <option key={a}>{a}</option>)}
-                    </optgroup>
-                  ))}
-                  {!allToOpts.includes(editForm.toAcct) && <option>{editForm.toAcct}</option>}
-                </select>
+                <label className="text-xs text-gray-400 block mb-1">입금 <span className="text-gray-300">— 들어오는 곳</span></label>
+                <button type="button"
+                  onClick={() => setAcctPicker({ field: 'to' })}
+                  className="w-full flex items-center justify-between text-xs border border-gray-200 rounded-lg px-2 h-8 hover:border-blue-300 bg-white focus:outline-none transition-colors">
+                  <span className={editForm.toAcct ? 'text-gray-800 truncate' : 'text-gray-400'}>{editForm.toAcct || '선택'}</span>
+                  <i className="ti ti-chevron-right text-gray-400 text-[10px] flex-shrink-0 ml-1" />
+                </button>
               </div>
             </div>
             <div>
@@ -575,6 +569,28 @@ export default function HistoryPage() {
             </div>
           </div>
         </div>
+      )}
+
+      {acctPicker && editForm && (
+        acctPicker.field === 'from' ? (
+          <AccountPickerModal
+            title="출금 — 나가는 곳"
+            value={editForm.fromAcct}
+            groups={fromGroups}
+            extraOpt={!allFromOpts.includes(editForm.fromAcct) ? editForm.fromAcct : undefined}
+            onSelect={v => setEditForm(f => f ? { ...f, fromAcct: v } : f)}
+            onClose={() => setAcctPicker(null)}
+          />
+        ) : (
+          <AccountPickerModal
+            title="입금 — 들어오는 곳"
+            value={editForm.toAcct}
+            groups={toGroups}
+            extraOpt={!allToOpts.includes(editForm.toAcct) ? editForm.toAcct : undefined}
+            onSelect={v => setEditForm(f => f ? { ...f, toAcct: v } : f)}
+            onClose={() => setAcctPicker(null)}
+          />
+        )
       )}
 
       {toast && (
