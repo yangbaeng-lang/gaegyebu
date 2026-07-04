@@ -116,19 +116,19 @@ function DividendTooltip({ active, payload, label }: any) {
   const rows = payload.filter(exactOf)
   const total = rows.reduce((s: number, p: { dataKey: string; payload: Record<string, number> }) => s + exactOf(p), 0)
   return (
-    <div className="bg-white border border-gray-200 rounded-xl shadow-lg px-4 py-3 text-sm min-w-[180px]">
-      <p className="font-semibold text-gray-700 mb-2">{label}</p>
+    <div className="bg-white border border-gray-200 rounded-lg shadow-lg px-3 py-2 text-[11px] min-w-[150px] max-w-[220px]">
+      <p className="font-semibold text-gray-700 mb-1">{label}</p>
       {rows.map((p: { name: string; dataKey: string; color: string; payload: Record<string, number> }) => (
-        <div key={p.name} className="flex items-center gap-2 py-0.5">
-          <span className="w-2.5 h-2.5 rounded-sm flex-shrink-0" style={{ background: p.color }} />
-          <span className="text-gray-500 flex-1">{p.name}</span>
-          <span className="font-medium text-gray-800 tabular-nums">{fmt(exactOf(p))}</span>
+        <div key={p.name} className="flex items-center gap-1.5 py-0.5">
+          <span className="w-2 h-2 rounded-sm flex-shrink-0" style={{ background: p.color }} />
+          <span className="text-gray-500 flex-1 truncate">{p.name}</span>
+          <span className="font-medium text-gray-800 tabular-nums flex-shrink-0">{fmt(exactOf(p))}</span>
         </div>
       ))}
       {rows.length > 1 && (
-        <div className="flex items-center gap-2 py-0.5 mt-1 pt-1 border-t border-gray-100">
+        <div className="flex items-center gap-1.5 py-0.5 mt-1 pt-1 border-t border-gray-100">
           <span className="text-gray-500 flex-1">합계</span>
-          <span className="font-semibold text-gray-800 tabular-nums">{fmt(total)}</span>
+          <span className="font-semibold text-gray-800 tabular-nums flex-shrink-0">{fmt(total)}</span>
         </div>
       )}
     </div>
@@ -147,6 +147,11 @@ export default function PensionDividendPage() {
   const [loading,       setLoading]       = useState(false)
   const [visibleItems,  setVisibleItems]  = useState<Set<string>>(new Set())
   const [mode,          setMode]          = useState<'monthly' | 'yearly'>('monthly')
+  const [rankMode,      setRankMode]      = useState<'all' | 'monthly' | 'yearly'>('all')
+  const [rankYear,      setRankYear]      = useState(currentYear)
+  const [rankMonth,     setRankMonth]     = useState(currentMonth)
+  const tableRef = useRef<HTMLDivElement>(null)
+  const [tableW, setTableW] = useState(0)
 
   useEffect(() => {
     fetch('/api/sessions', { cache: 'no-store' }).then(r => r.json()).then(d => {
@@ -185,11 +190,52 @@ export default function PensionDividendPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pensionSid])
 
+  useEffect(() => {
+    const el = tableRef.current
+    if (!el) return
+    const ro = new ResizeObserver(() => setTableW(el.clientWidth))
+    ro.observe(el)
+    setTableW(el.clientWidth)
+    return () => ro.disconnect()
+  }, [monthly.length > 0])
+
+  useEffect(() => {
+    if (!tableRef.current) return
+    const el = tableRef.current
+    requestAnimationFrame(() => { el.scrollLeft = el.scrollWidth })
+  }, [monthly, mode, tableW])
+
   const toggleItem = (name: string) =>
     setVisibleItems(prev => { const n = new Set(prev); n.has(name) ? n.delete(name) : n.add(name); return n })
 
   const itemColor = (name: string) =>
     ITEM_PALETTE[itemOrder.findIndex(i => i.name === name) % ITEM_PALETTE.length]
+
+  // 종목별 순위 기간 옵션 (데이터가 있는 연도들)
+  const rankYearOptions = (() => {
+    const years = new Set(monthly.map(e => Number(e.yearMonth.slice(0, 4))))
+    years.add(currentYear)
+    return Array.from(years).sort((a, b) => b - a)
+  })()
+
+  // 종목별 순위: 전체/월별/연도별 선택에 따른 집계
+  const rankItems: ItemSummary[] = (() => {
+    if (rankMode === 'all') return itemOrder
+    const totals: Record<string, number> = {}
+    const source = rankMode === 'monthly'
+      ? monthly.filter(e => e.yearMonth === `${rankYear}-${String(rankMonth).padStart(2, '0')}`)
+      : monthly.filter(e => e.yearMonth.startsWith(`${rankYear}-`))
+    source.forEach(e => {
+      for (const [name, amt] of Object.entries(e.items)) {
+        totals[name] = (totals[name] ?? 0) + amt
+      }
+    })
+    return Object.entries(totals)
+      .map(([name, total]) => ({ name, total }))
+      .sort((a, b) => b.total - a.total)
+  })()
+
+  const rankGrandTotal = rankItems.reduce((s, i) => s + i.total, 0)
 
   // 연도별: 월별 데이터를 연도 단위로 합산
   const yearlyData = (() => {
@@ -239,13 +285,14 @@ export default function PensionDividendPage() {
   )
 
   return (
-    <div className="flex-1 flex flex-col overflow-y-auto md:overflow-hidden bg-gray-50">
+    <div className="flex flex-col h-full bg-gray-50">
 
       {/* 헤더 */}
       <div className="px-4 md:px-8 pt-4 pb-2 flex-shrink-0">
         <h1 className="text-lg font-bold text-gray-800">배당금 현황</h1>
       </div>
 
+      <div className="flex-1 overflow-y-auto">
       {!pensionSid ? (
         <div className="flex flex-col items-center justify-center h-40 gap-2 text-gray-300">
           <i className="ti ti-pig-money text-3xl" />
@@ -275,10 +322,10 @@ export default function PensionDividendPage() {
             })}
           </div>
 
-          <div className="px-4 pb-4 flex flex-col gap-3 md:flex-1 md:min-h-0 md:px-8">
+          <div className="px-4 pb-4 flex flex-col gap-3 md:px-8">
 
             {/* Row 1: 요약 + 차트 */}
-            <div className="flex flex-col gap-3 md:flex-row md:min-h-0" style={{ flex: 3 }}>
+            <div className="flex flex-col gap-3 md:flex-row">
 
               {/* 요약 카드 */}
               <div className="bg-white rounded-2xl border border-gray-100 shadow-sm px-4 py-4 flex flex-col md:w-[352px] md:flex-shrink-0">
@@ -302,15 +349,41 @@ export default function PensionDividendPage() {
               </div>
 
               {/* 종목별 순위 */}
-              <div className="h-[240px] bg-white rounded-2xl border border-gray-100 shadow-sm p-4 flex flex-col md:h-auto md:flex-1 md:min-w-0">
-                <p className="text-sm font-semibold text-gray-600 mb-2 flex-shrink-0">종목별 누적 배당금</p>
-                <div className="flex-1 min-h-0 overflow-y-auto pr-2 flex flex-col gap-1.5">
-                  {itemOrder.map(({ name, total }) => (
+              <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 flex flex-col md:flex-1 md:min-w-0">
+                <div className="flex items-center justify-between mb-2 flex-shrink-0 flex-wrap gap-2">
+                  <p className="text-sm font-semibold text-gray-600">종목별 누적 배당금</p>
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <div className="flex rounded-lg overflow-hidden border border-gray-200 text-xs font-semibold flex-shrink-0">
+                      {(['all', 'monthly', 'yearly'] as const).map(m => (
+                        <button key={m} onClick={() => setRankMode(m)}
+                          className={`px-2.5 py-1 transition-colors ${rankMode === m ? 'bg-[#6b8cff] text-white' : 'bg-white text-gray-500 hover:bg-gray-50'}`}>
+                          {m === 'all' ? '전체' : m === 'monthly' ? '월별' : '연도별'}
+                        </button>
+                      ))}
+                    </div>
+                    {rankMode !== 'all' && (
+                      <select value={rankYear} onChange={e => setRankYear(Number(e.target.value))}
+                        className="text-xs border border-gray-200 rounded-lg px-2 py-1 text-gray-700 bg-white focus:outline-none focus:ring-2 focus:ring-[#6b8cff]/30">
+                        {rankYearOptions.map(y => <option key={y} value={y}>{y}년</option>)}
+                      </select>
+                    )}
+                    {rankMode === 'monthly' && (
+                      <select value={rankMonth} onChange={e => setRankMonth(Number(e.target.value))}
+                        className="text-xs border border-gray-200 rounded-lg px-2 py-1 text-gray-700 bg-white focus:outline-none focus:ring-2 focus:ring-[#6b8cff]/30">
+                        {Array.from({ length: 12 }, (_, i) => i + 1).map(m => <option key={m} value={m}>{m}월</option>)}
+                      </select>
+                    )}
+                  </div>
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  {rankItems.length === 0 ? (
+                    <div className="flex items-center justify-center text-gray-300 text-sm py-6">데이터 없음</div>
+                  ) : rankItems.map(({ name, total }) => (
                     <div key={name} className="flex items-center gap-2 py-1">
                       <span className="w-2.5 h-2.5 rounded-sm flex-shrink-0" style={{ background: itemColor(name) }} />
                       <span className="text-xs text-gray-600 flex-1 truncate">{name}</span>
                       <span className="text-xs text-gray-400 tabular-nums">
-                        {grandTotal > 0 ? `${((total / grandTotal) * 100).toFixed(1)}%` : ''}
+                        {rankGrandTotal > 0 ? `${((total / rankGrandTotal) * 100).toFixed(1)}%` : ''}
                       </span>
                       <span className="text-sm font-semibold text-gray-800 tabular-nums whitespace-nowrap">
                         {fmt(total)}
@@ -322,13 +395,13 @@ export default function PensionDividendPage() {
             </div>
 
             {/* Row 2: 배당금 추이 */}
-            <div className="flex flex-col md:min-h-0" style={{ flex: 4 }}>
-              <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 flex flex-col h-[280px] md:h-auto md:flex-1 md:min-h-0">
+            <div className="flex flex-col">
+              <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 flex flex-col">
                 <div className="flex items-center justify-between mb-2 flex-shrink-0">
                   <p className="text-sm font-semibold text-gray-600">{mode === 'monthly' ? '월별' : '연도별'} 배당금 추이</p>
                   <ModeToggle mode={mode} onChange={setMode} />
                 </div>
-                <div className="flex-1 min-h-0">
+                <div className="h-[240px] flex-shrink-0">
                   {tsData.length === 0
                     ? <div className="h-full flex items-center justify-center text-gray-300 text-sm">데이터 없음</div>
                     : (
@@ -340,7 +413,7 @@ export default function PensionDividendPage() {
                             <XAxis dataKey="month" {...xProps} />
                             <YAxis tickFormatter={v => `${v}만`} {...yAmt} />
                             <Tooltip content={<DividendTooltip />} cursor={{ fill: '#f3f4f6' }}
-                              position={{ y: 4 }} allowEscapeViewBox={{ x: true, y: true }} />
+                              position={{ y: 4 }} />
                             <ReferenceLine y={0} stroke="#e5e7eb" />
                             {visible.map(({ name }) => {
                               const isLast = name === lastVisible
@@ -367,12 +440,69 @@ export default function PensionDividendPage() {
                       </ScrollChart>
                     )}
                 </div>
+
+                {/* 월별/연도별 데이터 테이블 */}
+                {tsData.length > 0 && (() => {
+                  const LABEL_W = Math.min(220, Math.max(96, Math.max(...visible.map(i => i.name.length)) * 12 + 24))
+                  const maxDigits = tsData.reduce((max, row) => {
+                    const total = visible.reduce((s, i) => s + (row[`${i.name}__exact`] ?? 0), 0)
+                    const cellLens = visible
+                      .map(i => fmt(row[`${i.name}__exact`] ?? 0).length)
+                      .concat(fmt(total).length)
+                    return Math.max(max, ...cellLens)
+                  }, 0)
+                  const MIN_COL_W = Math.max(96, maxDigits * 7 + 24)
+                  const colW  = Math.max(tableW > 0 ? Math.floor((tableW - LABEL_W) / VISIBLE) : 60, MIN_COL_W)
+                  const fullW = Math.max(LABEL_W + tsData.length * colW, tableW)
+                  return (
+                    <div ref={tableRef} className="mt-3 pt-3 border-t border-gray-100 overflow-x-auto flex-shrink-0">
+                      <table className="text-xs border-collapse" style={{ width: fullW || '100%', tableLayout: 'fixed' }}>
+                        <colgroup>
+                          <col style={{ width: LABEL_W }} />
+                          {tsData.map(row => <col key={row.yearMonth} style={{ width: colW }} />)}
+                        </colgroup>
+                        <thead>
+                          <tr>
+                            <th className="text-left text-gray-400 font-medium py-1 pr-3 sticky left-0 bg-white whitespace-nowrap">구분</th>
+                            {tsData.map(row => (
+                              <th key={row.yearMonth} className="text-right text-gray-400 font-medium py-1 px-2 whitespace-nowrap">{row.month}</th>
+                            ))}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {visible.map(({ name }) => (
+                            <tr key={name} className="border-t border-gray-50">
+                              <td className="text-left py-1 pr-3 font-semibold whitespace-nowrap sticky left-0 bg-white truncate" style={{ color: itemColor(name) }}>{name}</td>
+                              {tsData.map(row => (
+                                <td key={row.yearMonth} className="text-right py-1 px-2 tabular-nums whitespace-nowrap text-gray-700">
+                                  {fmt(row[`${name}__exact`] ?? 0)}
+                                </td>
+                              ))}
+                            </tr>
+                          ))}
+                          <tr className="border-t border-gray-200">
+                            <td className="text-left py-1 pr-3 font-bold whitespace-nowrap sticky left-0 bg-white text-gray-700">합계</td>
+                            {tsData.map(row => {
+                              const total = visible.reduce((s, i) => s + (row[`${i.name}__exact`] ?? 0), 0)
+                              return (
+                                <td key={row.yearMonth} className="text-right py-1 px-2 tabular-nums whitespace-nowrap font-bold text-gray-900">
+                                  {fmt(total)}
+                                </td>
+                              )
+                            })}
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                  )
+                })()}
               </div>
             </div>
 
           </div>
         </>
       )}
+      </div>
     </div>
   )
 }
